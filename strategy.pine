@@ -1,0 +1,244 @@
+//@version=5
+
+strategy("NIFTY — webhook ()",
+
+     overlay=true,
+
+     calc_on_every_tick=true)
+
+// === Inputs ===
+engulf_min     = input.float(16, "Engulfing Min Body (pts)")
+doji_body_max  = input.float(16, "Max Doji Body (pts)")
+
+// === Tradetron Style TSL ===
+activation_pts = input.float(12, "Activate At")
+lock_profit    = input.float(8,  "Lock Profit At")
+profit_step    = input.float(6,  "Increase Profit By")
+trail_step     = input.float(6,  "Increase TSL By")
+
+// === Entry Block Filters ===
+grp_blk = "Entry Block Filters"
+no_trade_monday      = input.bool(true,  "No New Trades on Monday",            group=grp_blk)
+no_trade_monthly_exp  = input.bool(false, "No New Trades on Monthly Expiry Day", group=grp_blk)
+expiry_dow_str       = input.string("Tuesday", "Expiry Day of Week (for monthly detection)",
+     options=["Monday","Tuesday","Wednesday","Thursday","Friday"], group=grp_blk)
+
+// === Monthly Expiry Exit ===
+grp_mexp = "Monthly Expiry Exit"
+exit_on_monthly   = input.bool(true, "Exit on Monthly Expiry Day (Last Tue)", group=grp_mexp)
+monthly_exit_time = input.session("1510-1520", "Monthly Exit Window (IST)", group=grp_mexp)
+
+// === Time-Based Exit ===
+grp_texit = "Time-Based Exit"
+use_candle_exit = input.bool(true, "Exit After X Candles", group=grp_texit)
+max_candles     = input.int(300,   "Max Candles In Trade", minval=1, group=grp_texit)
+
+// === Day-of-week + monthly expiry detection ===
+dow_code = expiry_dow_str == "Monday"    ? dayofweek.monday  :
+           expiry_dow_str == "Tuesday"   ? dayofweek.tuesday :
+           expiry_dow_str == "Wednesday" ? dayofweek.wednesday :
+           expiry_dow_str == "Thursday"  ? dayofweek.thursday  :
+           dayofweek.friday
+
+next_week_ts      = time + 7 * 86400000
+is_last_dow_month = (dayofweek == dow_code) and (month(next_week_ts, syminfo.timezone) != month(time, syminfo.timezone))
+block_monday_now  = no_trade_monday and (dayofweek == dayofweek.monday)
+block_monthly_exp  = no_trade_monthly_exp and is_last_dow_month
+can_enter          = not block_monday_now and not block_monthly_exp
+
+in_monthly_window = not na(time(timeframe.period, monthly_exit_time))
+monthly_close_now  = exit_on_monthly and is_last_dow_month and in_monthly_window
+
+// === Helper Functions ===
+body() => math.abs(close - open)
+isBull() => close > open
+isBear() => close < open
+
+// === Engulfing Detection ===
+bull_engulf =
+     isBull() and
+     isBear()[1] and
+     close > open[1] and
+     open < close[1] and
+     body() >= engulf_min
+
+bear_engulf =
+     isBear() and
+     isBull()[1] and
+     close < open[1] and
+     open > close[1] and
+     body() >= engulf_min
+
+var float setup_line = na
+var string setup_type = na
+var int engulf_bar = na
+
+if bull_engulf
+    setup_line := (open + close) / 2
+    setup_type := "bull"
+    engulf_bar := bar_index
+
+if bear_engulf
+    setup_line := (open + close) / 2
+    setup_type := "bear"
+    engulf_bar := bar_index
+
+valid = not na(setup_line)
+
+// === Doji ===
+is_doji = body() <= doji_body_max and (high-low) >= body()*2
+touches_line = valid and high >= setup_line and low <= setup_line
+green_doji = is_doji and close > open
+red_doji   = is_doji and close < open
+
+// === Signals ===
+ce_signal = touches_line and green_doji
+pe_signal = touches_line and red_doji
+
+flat = strategy.position_size == 0
+
+// === Entries (only added: and can_enter) ===
+if ce_signal and flat and can_enter
+    strategy.entry("CALL", strategy.long)
+    alert("{\"auth-token\":\"80fd141c-a825-4c1d-82e1-180a83aa6d1f\",\"key\":\"new_long\",\"value\":\"1\"}", alert.freq_once_per_bar_close)
+
+if pe_signal and flat and can_enter
+    strategy.entry("PUT", strategy.short)
+    alert("{\"auth-token\":\"80fd141c-a825-4c1d-82e1-180a83aa6d1f\",\"key\":\"new_pe\",\"value\":\"1\"}", alert.freq_once_per_bar_close)
+
+// === Variables ===
+var float long_hh = na
+var float short_ll = na
+var float long_tsl = na
+var float short_tsl = na
+
+isLong = strategy.position_size > 0
+isShort = strategy.position_size < 0
+newLong = isLong and strategy.position_size[1] <= 0
+newShort = isShort and strategy.position_size[1] >= 0
+entry_price = strategy.position_avg_price
+
+// === Candle-count tracking (added here, AFTER newLong/newShort) ===
+var int entry_bar_index = na
+
+if newLong or newShort
+    entry_bar_index := bar_index
+
+if strategy.position_size == 0
+    entry_bar_index := na
+
+bars_in_trade   = na(entry_bar_index) ? 0 : (bar_index - entry_bar_index)
+candle_exit_now = use_candle_exit and (bars_in_trade >= max_candles) and (strategy.position_size != 0)
+
+long_profit_reached =
+     isLong and
+     (high-entry_price >= activation_pts)
+
+short_profit_reached =
+     isShort and
+     (entry_price-low >= activation_pts)
+
+// === LONG TSL ===
+if newLong
+    long_hh := high
+    long_tsl := na
+
+if isLong and not newLong
+    if long_profit_reached
+        long_hh := na(long_hh) ? high : math.max(long_hh, high)
+        extraProfit = math.max(0.0, long_hh - entry_price - activation_pts)
+        tslMove = math.floor(extraProfit / profit_step) * trail_step
+        long_tsl := entry_price + lock_profit + tslMove
+    else
+        long_tsl := na
+
+if not isLong
+    long_hh := na
+    long_tsl := na
+
+// === SHORT TSL ===
+if newShort
+    short_ll := low
+    short_tsl := na
+
+if isShort and not newShort
+    if short_profit_reached
+        short_ll := na(short_ll) ? low : math.min(short_ll, low)
+        extraProfit = math.max(0.0, entry_price - short_ll - activation_pts)
+        tslMove = math.floor(extraProfit / profit_step) * trail_step
+        short_tsl := entry_price - lock_profit - tslMove
+    else
+        short_tsl := na
+
+if not isShort
+    short_ll := na
+    short_tsl := na
+
+// === APPLY TSL EXIT ===
+if isLong and not na(long_tsl)
+    strategy.exit(
+         "CALL TSL",
+         from_entry="CALL",
+         stop=long_tsl)
+
+if isShort and not na(short_tsl)
+    strategy.exit(
+         "PUT TSL",
+         from_entry="PUT",
+         stop=short_tsl)
+
+// === Candle-Based Time Exit (added after TSL exit) ===
+if candle_exit_now
+    if isLong
+        strategy.close("CALL", comment="Candle Limit Exit")
+    if isShort
+        strategy.close("PUT", comment="Candle Limit Exit")
+    long_tsl  := na
+    short_tsl := na
+    long_hh   := na
+    short_ll  := na
+    entry_bar_index := na
+
+// === Monthly Expiry Close-All (added after candle exit) ===
+if monthly_close_now
+    strategy.close_all(comment="Monthly Expiry Exit")
+    long_tsl  := na
+    short_tsl := na
+    long_hh   := na
+    short_ll  := na
+    entry_bar_index := na
+
+// === PLOTS ===
+plot(
+     setup_line,
+     title="Setup Line",
+     color=color.yellow,
+     linewidth=2)
+
+plotshape(
+     green_doji and touches_line,
+     title="CE",
+     style=shape.labelup,
+     color=color.green,
+     text="CE",
+     location=location.belowbar)
+
+plotshape(
+     red_doji and touches_line,
+     title="PE",
+     style=shape.labeldown,
+     color=color.red,
+     text="PE",
+     location=location.abovebar)
+
+plot(
+     long_tsl,
+     title="Long TSL",
+     color=color.green,
+     linewidth=2)
+
+plot(
+     short_tsl,
+     title="Short TSL",
+     color=color.red,
+     linewidth=2)
