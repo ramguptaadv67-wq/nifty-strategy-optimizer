@@ -83,4 +83,5 @@
     return isNaN(d.getTime()) ? Date.now() : d.getTime();
   }
 
-  global.parseCSV = parseCSÂŸJJ\[ÙˆÙ[ˆOOH[™Yš[™YˆÈÙ[ˆˆÛØ˜[\ÊNÂ
+  global.parseCSV = parseCS;
+})(self);
