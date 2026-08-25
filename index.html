@@ -18,7 +18,21 @@
       <!-- LEFT: Config Panel -->
       <div>
         <div class="card">
-          <h2>1. Upload Data</h2>
+          <h2>1. Get Data</h2>
+
+          <!-- Yahoo Finance fetcher -->
+          <div class="yahoo-section">
+            <div class="yahoo-row">
+              <select id="yahooSymbol" class="yahoo-select"></select>
+              <select id="yahooInterval" class="yahoo-select"></select>
+              <select id="yahooRange" class="yahoo-select"></select>
+            </div>
+            <button class="btn btn-yahoo" id="yahooBtn">Fetch from Yahoo</button>
+            <div class="yahoo-status" id="yahooStatus" style="display:none"></div>
+          </div>
+
+          <div class="divider"><span>OR upload CSV</span></div>
+
           <div class="dropzone" id="dropzone">
             <div class="icon">📂</div>
             <p><strong>Click to upload</strong> or drag & drop</p>
@@ -166,4 +180,5 @@
     </div>
   </div>
 
+  <script src="js/yahoo.js"></script>
   <script src="js/app.js"></script>
