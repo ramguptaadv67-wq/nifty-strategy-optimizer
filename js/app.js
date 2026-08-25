@@ -11,6 +11,70 @@ let csvText = null;
     const candleCount = document.getElementById("candleCount");
     const runBtn = document.getElementById("runBtn");
 
+    // ---- Yahoo Finance fetch ----
+    const yahooSymbol = document.getElementById("yahooSymbol");
+    const yahooInterval = document.getElementById("yahooInterval");
+    const yahooRange = document.getElementById("yahooRange");
+    const yahooBtn = document.getElementById("yahooBtn");
+    const yahooStatus = document.getElementById("yahooStatus");
+
+    // Populate dropdowns
+    if (typeof YahooFinance !== "undefined") {
+      Object.entries(YahooFinance.SYMBOLS).forEach(([name, ticker]) => {
+        const opt = document.createElement("option");
+        opt.value = ticker; opt.textContent = name;
+        yahooSymbol.appendChild(opt);
+      });
+      Object.entries(YahooFinance.INTERVALS).forEach(([name, val]) => {
+        const opt = document.createElement("option");
+        opt.value = val; opt.textContent = name;
+        yahooInterval.appendChild(opt);
+      });
+      YahooFinance.RANGES.forEach(r => {
+        const opt = document.createElement("option");
+        opt.value = r;
+        const label = r === "max" ? "Max (10+ years)" : r;
+        opt.textContent = label;
+        if (r === "1y") opt.selected = true;
+        yahooRange.appendChild(opt);
+      });
+    }
+
+    yahooBtn.addEventListener("click", async () => {
+      const symbol = yahooSymbol.value;
+      const interval = yahooInterval.value;
+      const range = yahooRange.value;
+
+      yahooBtn.disabled = true;
+      yahooBtn.textContent = "Fetching...";
+      yahooStatus.style.display = "block";
+      yahooStatus.className = "yahoo-status loading";
+      yahooStatus.textContent = "Connecting to Yahoo Finance...";
+
+      try {
+        const { candles, csvText: csv, meta } = await YahooFinance.fetchCandles(
+          symbol, interval, range,
+          (msg) => { yahooStatus.textContent = msg; }
+        );
+
+        csvText = csv;
+        fileInfo.style.display = "block";
+        const symbolName = Object.entries(YahooFinance.SYMBOLS).find(([k,v]) => v === symbol)?.[0] || symbol;
+        const intervalName = Object.entries(YahooFinance.INTERVALS).find(([k,v]) => v === interval)?.[0] || interval;
+        fileInfo.textContent = `✓ Yahoo Finance: ${symbolName} · ${intervalName} · ${range} (${candles.length} candles)`;
+        runBtn.disabled = false;
+        yahooStatus.className = "yahoo-status success";
+        yahooStatus.textContent = `✓ Fetched ${candles.length} candles from ${meta.exchangeName || symbol} (${new Date(candles[0].time).toLocaleDateString()} → ${new Date(candles[candles.length-1].time).toLocaleDateString()})`;
+        candleCount.textContent = candles.length + " candles ready for optimization.";
+      } catch (err) {
+        yahooStatus.className = "yahoo-status error";
+        yahooStatus.textContent = "✗ " + err.message;
+      } finally {
+        yahooBtn.disabled = false;
+        yahooBtn.textContent = "Fetch from Yahoo";
+      }
+    });
+
     dropzone.addEventListener("click", () => fileInput.click());
     dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("dragover"); });
     dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
