@@ -30,10 +30,13 @@
   const RANGES = ["1mo", "3mo", "6mo", "1y", "2y", "5y", "10y", "max"];
 
   // CORS proxy fallbacks (tried in order)
+  // Each returns a fetch-compatible URL that wraps the original Yahoo URL
   const CORS_PROXIES = [
     (url) => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
     (url) => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
     (url) => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    (url) => `https://thingproxy.freeboard.io/fetch/${url}`,
+    (url) => `https://cors-anywhere.herokuapp.com/${url}`,
   ];
 
   /**
@@ -68,9 +71,13 @@
         if (onProgress) onProgress(`Trying CORS proxy ${i + 1}/${CORS_PROXIES.length}...`);
         try {
           const proxyUrl = CORS_PROXIES[i](yahooUrl);
-          const resp = await fetch(proxyUrl);
+          const controller = new AbortController();
+          const timeout = setTimeout(() => controller.abort(), 8000);
+          const resp = await fetch(proxyUrl, { signal: controller.signal });
+          clearTimeout(timeout);
           if (resp.ok) {
-            data = await resp.json();
+            const text = await resp.text();
+            data = JSON.parse(text);
             if (data && data.chart && data.chart.result) break;
             data = null;
           }
@@ -83,8 +90,8 @@
     if (!data || !data.chart || !data.chart.result) {
       throw new Error(
         "Failed to fetch from Yahoo Finance. " +
-        "The API may be rate-limited or CORS proxies are unavailable. " +
-        "Try again later or upload a CSV manually. " +
+        "All CORS proxies are unavailable or rate-limited. " +
+        "Please try again in a moment. " +
         (lastError ? "(" + lastError.message + ")" : "")
       );
     }
