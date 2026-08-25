@@ -1,2 +1,4 @@
 .git
 wrangler.toml
+src
+node_modules
