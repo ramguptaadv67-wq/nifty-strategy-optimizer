@@ -119,8 +119,12 @@ let csvText = null;
       const sortMetric = document.getElementById("sortMetric").value;
 
       if (worker) worker.terminate();
-      worker = new Worker("js/worker.js");
+      worker = new Worker("js/worker.js?v=" + Date.now());
       worker.onmessage = handleWorkerMessage;
+      worker.onerror = function(e) {
+        document.getElementById("progressText").textContent = "Worker Error: " + (e.message || e.filename + ":" + e.lineno);
+        runBtn.disabled = false;
+      };
       worker.postMessage({ type: "optimize", csvText, ranges, fixedParams, steps, sortMetric });
     });
 
