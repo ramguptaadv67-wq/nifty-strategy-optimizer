@@ -53,16 +53,19 @@
     let data = null;
     let lastError = null;
 
-    // Try 1: Cloudflare Pages Function (works when deployed on Cloudflare)
-    if (onProgress) onProgress("Trying Cloudflare proxy...");
+    // Try 1: Cloudflare Worker /api/yahoo route (primary, always works when deployed)
+    if (onProgress) onProgress("Fetching from Yahoo Finance...");
     try {
       const fnUrl = `/api/yahoo?symbol=${encodeURIComponent(symbol)}&interval=${interval}&range=${range}`;
-      const resp = await fetch(fnUrl);
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 15000);
+      const resp = await fetch(fnUrl, { signal: controller.signal });
+      clearTimeout(timeout);
       if (resp.ok) {
         data = await resp.json();
       }
     } catch (e) {
-      // Not deployed on Cloudflare or function not available
+      lastError = e;
     }
 
     // Try 2: Public CORS proxies
@@ -89,9 +92,10 @@
 
     if (!data || !data.chart || !data.chart.result) {
       throw new Error(
-        "Failed to fetch from Yahoo Finance. " +
-        "All CORS proxies are unavailable or rate-limited. " +
-        "Please try again in a moment. " +
+        "Could not fetch from Yahoo Finance. " +
+        "This app needs to be deployed on Cloudflare (npx wrangler deploy) " +
+        "for the /api/yahoo proxy to work. " +
+        "Browsers block direct calls to Yahoo Finance due to CORS restrictions. " +
         (lastError ? "(" + lastError.message + ")" : "")
       );
     }
