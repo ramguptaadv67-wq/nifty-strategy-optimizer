@@ -143,3 +143,29 @@
     .stat-box { background: var(--surface2); border-radius: 6px; padding: 0.75rem; text-align: center; }
     .stat-box .val { font-size: 1.3rem; font-weight: 700; }
     .stat-box .label { font-size: 0.7rem; color: var(--text-dim); margin-top: 2px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    /* Yahoo Finance fetcher */
+    .yahoo-section { margin-bottom: 0; }
+    .yahoo-row { display: flex; gap: 0.4rem; margin-bottom: 0.5rem; }
+    .yahoo-select {
+      background: var(--surface2); border: 1px solid var(--border); border-radius: 4px;
+      color: var(--text); padding: 5px 6px; font-size: 0.78rem; flex: 1; min-width: 0;
+    }
+    .btn-yahoo {
+      background: var(--surface2); border: 1px solid var(--accent); color: var(--accent);
+      width: 100%; padding: 0.55rem; font-size: 0.82rem;
+    }
+    .btn-yahoo:hover { background: rgba(88,166,255,0.1); }
+    .btn-yahoo:disabled { opacity: 0.5; cursor: not-allowed; }
+    .yahoo-status {
+      margin-top: 0.5rem; padding: 0.5rem 0.6rem; border-radius: 4px; font-size: 0.75rem; line-height: 1.4;
+    }
+    .yahoo-status.loading { background: rgba(88,166,255,0.1); color: var(--accent); }
+    .yahoo-status.success { background: rgba(63,185,80,0.1); color: var(--green); }
+    .yahoo-status.error { background: rgba(248,81,73,0.1); color: var(--red); }
+    .divider {
+      display: flex; align-items: center; gap: 0.5rem; margin: 1rem 0;
+      color: var(--text-dim); font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.5px;
+    }
+    .divider::before, .divider::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+    .divider span { white-space: nowrap; }
