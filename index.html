@@ -10,7 +10,7 @@
 <body>
   <header>
     <h1>NIFTY Strategy <span>Optimizer</span></h1>
-    <p>Upload OHLCV data · Sweep all parameter combinations (0–99) · Get top 20 results</p>
+    <p>Fetch live data from Yahoo Finance · Sweep all parameter combinations (0–99) · Get top 20 results</p>
   </header>
 
   <div class="container">
@@ -18,7 +18,7 @@
       <!-- LEFT: Config Panel -->
       <div>
         <div class="card">
-          <h2>1. Get Data</h2>
+          <h2>1. Fetch Data</h2>
 
           <!-- Yahoo Finance fetcher -->
           <div class="yahoo-section">
@@ -29,18 +29,8 @@
             </div>
             <button class="btn btn-yahoo" id="yahooBtn">Fetch from Yahoo</button>
             <div class="yahoo-status" id="yahooStatus" style="display:none"></div>
+            <div class="hint" id="candleCount"></div>
           </div>
-
-          <div class="divider"><span>OR upload CSV</span></div>
-
-          <div class="dropzone" id="dropzone">
-            <div class="icon">📂</div>
-            <p><strong>Click to upload</strong> or drag & drop</p>
-            <p>CSV with OHLCV columns (time, open, high, low, close, volume)</p>
-          </div>
-          <input type="file" id="fileInput" accept=".csv,.txt" hidden>
-          <div class="file-info" id="fileInfo"></div>
-          <div class="hint" id="candleCount"></div>
         </div>
 
         <div class="card">
@@ -173,7 +163,7 @@
         <div class="card" id="emptyCard">
           <div class="empty-state">
             <div class="icon">📈</div>
-            <p>Upload your OHLCV CSV and run the optimization to see results here.</p>
+            <p>Fetch data from Yahoo Finance and run the optimization to see results here.</p>
           </div>
         </div>
       </div>
