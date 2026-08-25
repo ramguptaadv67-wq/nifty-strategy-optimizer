@@ -4,19 +4,14 @@ let csvText = null;
     let currentSort = "netProfit";
     let sortDesc = true;
 
-    // ---- File upload ----
-    const dropzone = document.getElementById("dropzone");
-    const fileInput = document.getElementById("fileInput");
-    const fileInfo = document.getElementById("fileInfo");
-    const candleCount = document.getElementById("candleCount");
-    const runBtn = document.getElementById("runBtn");
-
     // ---- Yahoo Finance fetch ----
     const yahooSymbol = document.getElementById("yahooSymbol");
     const yahooInterval = document.getElementById("yahooInterval");
     const yahooRange = document.getElementById("yahooRange");
     const yahooBtn = document.getElementById("yahooBtn");
     const yahooStatus = document.getElementById("yahooStatus");
+    const candleCount = document.getElementById("candleCount");
+    const runBtn = document.getElementById("runBtn");
 
     // Populate dropdowns
     if (typeof YahooFinance !== "undefined") {
@@ -58,10 +53,6 @@ let csvText = null;
         );
 
         csvText = csv;
-        fileInfo.style.display = "block";
-        const symbolName = Object.entries(YahooFinance.SYMBOLS).find(([k,v]) => v === symbol)?.[0] || symbol;
-        const intervalName = Object.entries(YahooFinance.INTERVALS).find(([k,v]) => v === interval)?.[0] || interval;
-        fileInfo.textContent = `✓ Yahoo Finance: ${symbolName} · ${intervalName} · ${range} (${candles.length} candles)`;
         runBtn.disabled = false;
         yahooStatus.className = "yahoo-status success";
         yahooStatus.textContent = `✓ Fetched ${candles.length} candles from ${meta.exchangeName || symbol} (${new Date(candles[0].time).toLocaleDateString()} → ${new Date(candles[candles.length-1].time).toLocaleDateString()})`;
@@ -74,35 +65,6 @@ let csvText = null;
         yahooBtn.textContent = "Fetch from Yahoo";
       }
     });
-
-    dropzone.addEventListener("click", () => fileInput.click());
-    dropzone.addEventListener("dragover", e => { e.preventDefault(); dropzone.classList.add("dragover"); });
-    dropzone.addEventListener("dragleave", () => dropzone.classList.remove("dragover"));
-    dropzone.addEventListener("drop", e => {
-      e.preventDefault();
-      dropzone.classList.remove("dragover");
-      if (e.dataTransfer.files[0]) handleFile(e.dataTransfer.files[0]);
-    });
-    fileInput.addEventListener("change", e => { if (e.target.files[0]) handleFile(e.target.files[0]); });
-
-    function handleFile(file) {
-      const reader = new FileReader();
-      reader.onload = e => {
-        csvText = e.target.result;
-        fileInfo.style.display = "block";
-        fileInfo.textContent = "✓ " + file.name + " (" + (file.size / 1024).toFixed(1) + " KB)";
-        runBtn.disabled = false;
-        candleCount.textContent = "Click 'Run Optimization' to parse and begin.";
-
-        // Quick parse to count candles
-        try {
-          const lines = csvText.replace(/\r\n/g, "\n").split("\n").filter(l => l.trim().length > 0);
-          const hasHeader = /open|high|low|close|date|time/i.test(lines[0]);
-          candleCount.textContent = (hasHeader ? lines.length - 1 : lines.length) + " rows detected.";
-        } catch (err) { /* ignore */ }
-      };
-      reader.readAsText(file);
-    }
 
     // ---- Collect ranges ----
     function getRanges() {
