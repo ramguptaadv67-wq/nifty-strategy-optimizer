@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NIFTY Strategy Optimizer — Parameter Sweep & Backtester</title>
+  <meta name="description" content="Upload OHLCV data, sweep all parameter combinations (0-99), and find the top 20 best-performing configurations for the NIFTY engulfing-doji-TSL strategy.">
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header>
+    <h1>NIFTY Strategy <span>Optimizer</span></h1>
+    <p>Upload OHLCV data · Sweep all parameter combinations (0–99) · Get top 20 results</p>
+  </header>
+
+  <div class="container">
+    <div class="grid">
+      <!-- LEFT: Config Panel -->
+      <div>
+        <div class="card">
+          <h2>1. Upload Data</h2>
+          <div class="dropzone" id="dropzone">
+            <div class="icon">📂</div>
+            <p><strong>Click to upload</strong> or drag & drop</p>
+            <p>CSV with OHLCV columns (time, open, high, low, close, volume)</p>
+          </div>
+          <input type="file" id="fileInput" accept=".csv,.txt" hidden>
+          <div class="file-info" id="fileInfo"></div>
+          <div class="hint" id="candleCount"></div>
+        </div>
+
+        <div class="card">
+          <h2>2. Parameter Sweep Ranges</h2>
+          <p class="hint" style="margin-bottom:0.75rem">Set min/max for each parameter. Default: 0–99 with step 1.</p>
+
+          <div class="param-row">
+            <label>Engulfing Min Body</label>
+            <input type="number" id="engulf_min_min" value="0" min="0" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="engulf_min_max" value="99" min="0" max="99">
+            <input type="number" id="engulf_min_step" value="4" min="1" max="99" title="Step">
+          </div>
+          <div class="param-row">
+            <label>Doji Body Max</label>
+            <input type="number" id="doji_body_max_min" value="0" min="0" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="doji_body_max_max" value="99" min="0" max="99">
+            <input type="number" id="doji_body_max_step" value="4" min="1" max="99" title="Step">
+          </div>
+          <div class="param-row">
+            <label>Activate At (TSL)</label>
+            <input type="number" id="activation_pts_min" value="0" min="0" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="activation_pts_max" value="99" min="0" max="99">
+            <input type="number" id="activation_pts_step" value="5" min="1" max="99" title="Step">
+          </div>
+          <div class="param-row">
+            <label>Lock Profit At</label>
+            <input type="number" id="lock_profit_min" value="0" min="0" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="lock_profit_max" value="99" min="0" max="99">
+            <input type="number" id="lock_profit_step" value="4" min="1" max="99" title="Step">
+          </div>
+          <div class="param-row">
+            <label>Profit Step</label>
+            <input type="number" id="profit_step_min" value="1" min="1" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="profit_step_max" value="99" min="0" max="99">
+            <input type="number" id="profit_step_step" value="5" min="1" max="99" title="Step">
+          </div>
+          <div class="param-row">
+            <label>Trail Step</label>
+            <input type="number" id="trail_step_min" value="1" min="1" max="99">
+            <span class="range-label">to</span>
+            <input type="number" id="trail_step_max" value="99" min="0" max="99">
+            <input type="number" id="trail_step_step" value="5" min="1" max="99" title="Step">
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>3. Strategy Filters</h2>
+          <div class="checkbox-row"><input type="checkbox" id="no_trade_monday" checked><label for="no_trade_monday">No new trades on Monday</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="no_trade_monthly_exp"><label for="no_trade_monthly_exp">No new trades on monthly expiry day</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="exit_on_monthly" checked><label for="exit_on_monthly">Exit on monthly expiry day</label></div>
+          <div class="checkbox-row"><input type="checkbox" id="use_candle_exit" checked><label for="use_candle_exit">Exit after X candles</label></div>
+
+          <div class="param-row" style="margin-top:0.6rem">
+            <label>Expiry Day of Week</label>
+            <select id="expiry_dow_str">
+              <option>Monday</option><option selected>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option>
+            </select>
+          </div>
+          <div class="param-row">
+            <label>Max Candles In Trade</label>
+            <input type="number" id="max_candles" value="300" min="1">
+          </div>
+          <div class="param-row">
+            <label>Monthly Exit Window</label>
+            <input type="text" id="monthly_exit_time" value="1510-1520" style="width:100%">
+          </div>
+
+          <div class="param-row" style="margin-top:0.6rem">
+            <label>Sort Results By</label>
+            <select id="sortMetric">
+              <option value="netProfit" selected>Net Profit</option>
+              <option value="sharpe">Sharpe Ratio</option>
+              <option value="winRate">Win Rate</option>
+              <option value="profitFactor">Profit Factor</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="card">
+          <button class="btn" id="runBtn" disabled>Run Optimization</button>
+          <div class="progress-wrap" id="progressWrap">
+            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+            <div class="progress-text" id="progressText">Initializing...</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- RIGHT: Results -->
+      <div>
+        <div class="card" id="resultsCard" style="display:none">
+          <div class="stats-grid" id="statsGrid"></div>
+
+          <div class="tabs">
+            <div class="tab active" data-tab="table">Top 20 Results</div>
+            <div class="tab" data-tab="chart">Equity Curve</div>
+          </div>
+
+          <div id="tab-table">
+            <div class="table-wrap">
+              <table id="resultsTable">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th data-sort="netProfit">Net Profit</th>
+                    <th data-sort="totalTrades">Trades</th>
+                    <th data-sort="winRate">Win %</th>
+                    <th data-sort="profitFactor">PF</th>
+                    <th data-sort="sharpe">Sharpe</th>
+                    <th data-sort="maxDrawdown">Max DD</th>
+                    <th data-sort="avgTrade">Avg/Trade</th>
+                    <th>Parameters</th>
+                  </tr>
+                </thead>
+                <tbody id="resultsBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div id="tab-chart" style="display:none">
+            <canvas id="chartCanvas"></canvas>
+            <p class="hint" style="text-align:center;margin-top:0.5rem">Equity curve for the #1 ranked parameter set. Click a row in the table to view that combination's equity curve.</p>
+          </div>
+        </div>
+
+        <div class="card" id="emptyCard">
+          <div class="empty-state">
+            <div class="icon">📈</div>
+            <p>Upload your OHLCV CSV and run the optimization to see results here.</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="js/app.js"></script>
