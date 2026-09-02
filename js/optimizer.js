@@ -135,6 +135,10 @@
       return { top: [], totalTested: 0, totalCombinations: 0 };
     }
 
+    // Warn if huge combination count
+    if (onProgress && total > 10000000) {
+      onProgress(0, total);
+    }
 
     // Build value lists for each parameter
     var info = buildValueLists(ranges, steps);
@@ -161,7 +165,7 @@
 
     var topBuffer = new TopNBuffer(TOP_N, isDesc);
     var tested = 0;
-    var progressInterval = Math.max(1, Math.floor(total / 200)); // report ~200 times
+    var progressInterval = Math.min(50000, Math.max(1, Math.floor(total / 200))); // cap at 50K
 
     // Mixed-radix counter to iterate combinations one at a time
     var indices = new Array(numParams).fill(0);

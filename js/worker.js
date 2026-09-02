@@ -98,8 +98,13 @@ self.onmessage = function (e) {
 
       self.postMessage({ type: "parsed", candleCount: candles.length });
 
+      var lastProgressTime = 0;
       var result = self.optimizeParams(candles, ranges, fixedParams, steps, function(done, total) {
-        self.postMessage({ type: "progress", done: done, total: total });
+        var now = Date.now();
+        if (now - lastProgressTime > 500 || done === total) {
+          lastProgressTime = now;
+          self.postMessage({ type: "progress", done: done, total: total });
+        }
       }, sortMetric);
 
       self.postMessage({ type: "done", result: result });
