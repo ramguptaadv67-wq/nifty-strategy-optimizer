@@ -1,147 +1,408 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NIFTY Strategy Optimizer â€” Parameter Sweep & Backtester</title>
-  <link rel="stylesheet" href="css/styles.css?v=3">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIFTY Strategy Optimizer</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;--text:#e6edf3;--text-dim:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--radius:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem}
+header h1{font-size:1.4rem;font-weight:700}
+header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
+.container{max-width:1100px;margin:0 auto;padding:1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
+.card h2{font-size:.95rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.card h2::before{content:'';width:3px;height:16px;background:var(--accent);border-radius:2px}
+.muted{color:var(--text-dim);font-size:.82rem;margin-bottom:.75rem}
+.yahoo-row{display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.yahoo-row select{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:8px 10px;font-size:.85rem;flex:1;min-width:120px;cursor:pointer}
+.yahoo-row select:hover{border-color:var(--accent)}
+.run-section{text-align:center;margin-bottom:1rem}
+.run-btn{background:linear-gradient(135deg,var(--accent),#4f8ef7);color:#fff;border:none;border-radius:var(--radius);padding:.85rem 2.5rem;font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(88,166,255,.3)}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(88,166,255,.5)}
+.run-btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+#yahooBtn{background:var(--surface2);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:8px 16px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+#yahooBtn:hover:not(:disabled){background:rgba(88,166,255,.12);box-shadow:0 0 12px rgba(88,166,255,.3)}
+#yahooBtn:disabled{opacity:.5;cursor:not-allowed}
+.yahoo-status{margin-top:.5rem;padding:.6rem .75rem;border-radius:4px;font-size:.8rem;line-height:1.4;display:none}
+.yahoo-status.loading{background:rgba(88,166,255,.1);color:var(--accent)}
+.yahoo-status.success{background:rgba(63,185,80,.1);color:var(--green)}
+.yahoo-status.error{background:rgba(248,81,73,.1);color:var(--red)}
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem}
+.param-item{background:var(--surface2);border-radius:6px;padding:.6rem .75rem}
+.param-item label{display:block;font-size:.8rem;color:var(--text-dim);margin-bottom:.4rem}
+.range-row{display:flex;align-items:center;gap:.4rem}
+.range-row span{font-size:.75rem;color:var(--text-dim);min-width:28px}
+.range-row input[type="number"]{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 8px;font-size:.85rem;width:55px;text-align:center}
+.range-row input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.combo-count{font-size:.85rem;font-weight:600;padding:.5rem .75rem;background:var(--surface2);border-radius:4px;margin-top:.75rem}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.5rem;margin-bottom:.75rem}
+.filter-grid label{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-dim);cursor:pointer}
+.filter-grid input[type="checkbox"]{accent-color:var(--accent);width:16px;height:16px}
+.filter-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
+.filter-row label{font-size:.8rem;color:var(--text-dim);white-space:nowrap}
+.filter-row select,.filter-row input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 10px;font-size:.82rem;cursor:pointer}
+.filter-row select:hover,.filter-row input:hover{border-color:var(--accent)}
+.progress-wrap{margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;display:none}
+.progress-bar{width:100%;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));width:0%;transition:width .15s;border-radius:5px}
+.progress-text{font-size:.82rem;color:var(--text-dim);margin-top:.5rem;text-align:center}
+.tabs{display:flex;gap:.5rem;margin-bottom:1rem;border-bottom:1px solid var(--border)}
+.tab{padding:.6rem 1.2rem;font-size:.88rem;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin-bottom:1rem}
+.stat-item{background:var(--surface2);border-radius:6px;padding:.7rem;text-align:center}
+.stat-item .stat-val{font-size:1.2rem;font-weight:700;color:var(--accent)}
+.stat-item .stat-label{font-size:.68rem;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.results-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.results-table th{text-align:left;padding:.6rem .5rem;border-bottom:2px solid var(--border);color:var(--text-dim);font-weight:600;white-space:nowrap;cursor:pointer}
+.results-table th:hover{color:var(--accent)}
+.results-table td{padding:.5rem;border-bottom:1px solid var(--border);white-space:nowrap}
+.results-table tr{cursor:pointer;transition:background .1s}
+.results-table tr:hover td{background:rgba(88,166,255,.06)}
+.results-table tr.active td{background:rgba(88,166,255,.12)}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.params-cell{font-family:'SF Mono',Monaco,monospace;font-size:.72rem;color:var(--text-dim)}
+#equityCanvas{width:100%;height:400px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-dim)}
+.empty-state p:first-child{font-size:3rem;margin-bottom:.5rem}
+</style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <h1>ğŸ“Š NIFTY Strategy Optimizer</h1>
-      <p class="subtitle">Fetch live data from Yahoo Finance Â· Sweep all parameter combinations Â· Get top 20 results</p>
-    </header>
+<header>
+<h1>ğŸ“Š NIFTY Strategy Optimizer</h1>
+<p>Fetch live data from Yahoo Finance Â· Sweep parameter combinations Â· Get top 20 results</p>
+</header>
+<div class="container">
 
-    <!-- 1. Fetch Data -->
-    <section class="card">
-      <h2>1. Fetch Data</h2>
-      <div class="yahoo-row">
-        <select id="yahooSymbol"></select>
-        <select id="yahooInterval"></select>
-        <select id="yahooRange"></select>
-        <button id="yahooBtn">Fetch from Yahoo</button>
-      </div>
-      <div id="yahooStatus" class="yahoo-status" style="display:none;"></div>
-      <p id="candleCount" class="muted">No data fetched yet.</p>
-    </section>
+<section class="card">
+<h2>1. Fetch Data</h2>
+<div class="yahoo-row">
+<select id="yahooSymbol"></select>
+<select id="yahooInterval"></select>
+<select id="yahooRange"></select>
+<button id="yahooBtn">Fetch from Yahoo</button>
+</div>
+<div id="yahooStatus" class="yahoo-status"></div>
+<p id="candleCount" class="muted">No data fetched yet.</p>
+</section>
 
-    <!-- 2. Parameter Sweep Ranges -->
-    <section class="card">
-      <h2>2. Parameter Sweep Ranges</h2>
-      <p class="muted">Set min/max for each parameter. Default range 0â€“99 with step 10. <strong>Max 50 lakh combinations.</strong></p>
-      
-      <div class="param-grid">
-        <div class="param-item">
-          <label>Engulfing Min Body</label>
-          <div class="range-row">
-            <input type="number" id="engulf_min_min" value="0" min="0" max="99">
-            <span>to</span>
-            <input type="number" id="engulf_min_max" value="99" min="0" max="99">
-            <span>step</span>
-            <input type="number" id="engulf_min_step" value="10" min="1" max="99">
-          </div>
-        </div>
-        <div class="param-item">
-          <label>Doji Body Max</label>
-          <div class="range-row">
-            <input type="number" id="doji_body_max_min" value="0" min="0" max="99">
-            <span>to</span>
-            <input type="number" id="doji_body_max_max" value="99" min="0" max="99">
-            <span>step</span>
-            <input type="number" id="doji_body_max_step" value="10" min="1" max="99">
-          </div>
-        </div>
-        <div class="param-item">
-          <label>Activate At (TSL)</label>
-          <div class="range-row">
-            <input type="number" id="activation_pts_min" value="0" min="0" max="99">
-            <span>to</span>
-            <input type="number" id="activation_pts_max" value="99" min="0" max="99">
-            <span>step</span>
-            <input type="number" id="activation_pts_step" value="10" min="1" max="99">
-          </div>
-        </div>
-        <div class="param-item">
-          <label>Lock Profit At</label>
-          <div class="range-row">
-            <input type="number" id="lock_profit_min" value="0" min="0" max="99">
-            <span>to</span>
-            <input type="number" id="lock_profit_max" value="99" min="0" max="99">
-            <span>step</span>
-            <input type="number" id="lock_profit_step" value="10" min="1" max="99">
-          </div>
-        </div>
-        <div class="param-item">
-          <label>Profit Step</label>
-          <div class="range-row">
-            <input type="number" id="profit_step_min" value="1" min="1" max="99">
-            <span>to</span>
-            <input type="number" id="profit_step_max" value="99" min="1" max="99">
-            <span>step</span>
-            <input type="number" id="profit_step_step" value="10" min="1" max="99">
-          </div>
-        </div>
-        <div class="param-item">
-          <label>Trail Step</label>
-          <div class="range-row">
-            <input type="number" id="trail_step_min" value="1" min="1" max="99">
-            <span>to</span>
-            <input type="number" id="trail_step_max" value="99" min="1" max="99">
-            <span>step</span>
-            <input type="number" id="trail_step_step" value="10" min="1" max="99">
-          </div>
-        </div>
-      </div>
-      <div id="comboCount" class="combo-count" style="font-weight:600; margin-top:12px;"></div>
-    </section>
+<section class="card">
+<h2>2. Parameter Sweep Ranges</h2>
+<p class="muted">Set min/max for each parameter. Default range 0â€“99 with step 10. Max 50 lakh combinations.</p>
+<div class="param-grid">
+<div class="param-item"><label>Engulfing Min Body</label><div class="range-row"><input type="number" id="engulf_min_min" value="0" min="0" max="99"><span>to</span><input type="number" id="engulf_min_max" value="99" min="0" max="99"><span>step</span><input type="number" id="engulf_min_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Doji Body Max</label><div class="range-row"><input type="number" id="doji_body_max_min" value="0" min="0" max="99"><span>to</span><input type="number" id="doji_body_max_max" value="99" min="0" max="99"><span>step</span><input type="number" id="doji_body_max_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Activate At (TSL)</label><div class="range-row"><input type="number" id="activation_pts_min" value="0" min="0" max="99"><span>to</span><input type="number" id="activation_pts_max" value="99" min="0" max="99"><span>step</span><input type="number" id="activation_pts_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Lock Profit At</label><div class="range-row"><input type="number" id="lock_profit_min" value="0" min="0" max="99"><span>to</span><input type="number" id="lock_profit_max" value="99" min="0" max="99"><span>step</span><input type="number" id="lock_profit_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Profit Step</label><div class="range-row"><input type="number" id="profit_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="profit_step_max" value="99" min="1" max="99"><span>step</span><input type="number" id="profit_step_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Trail Step</label><div class="range-row"><input type="number" id="trail_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="trail_step_max" value="99" min="1" max="99"><span>step</span><input type="number" id="trail_step_step" value="10" min="1" max="99"></div></div>
+</div>
+<div id="comboCount" class="combo-count"></div>
+</section>
 
-    <!-- 3. Strategy Filters -->
-    <section class="card">
-      <h2>3. Strategy Filters</h2>
-      <div class="filter-grid">
-        <label><input type="checkbox" id="no_trade_monday" checked> No new trades on Monday</label>
-        <label><input type="checkbox" id="no_trade_monthly_exp"> No new trades on monthly expiry day</label>
-        <label><input type="checkbox" id="exit_on_monthly" checked> Exit on monthly expiry day</label>
-        <label><input type="checkbox" id="use_candle_exit" checked> Exit after X candles</label>
-      </div>
-      <div class="filter-row">
-        <label>Expiry Day of Week</label>
-        <select id="expiry_dow_str">
-          <option>Monday</option>
-          <option selected>Tuesday</option>
-          <option>Wednesday</option>
-          <option>Thursday</option>
-          <option>Friday</option>
-        </select>
-        <label>Max Candles In Trade</label>
-        <input type="number" id="max_candles" value="300" min="1" max="9999">
-        <label>Monthly Exit Window</label>
-        <input type="text" id="monthly_exit_time" value="1510-1520">
-      </div>
-      <div class="filter-row">
-        <label>Sort Results By</label>
-        <select id="sortMetric">
-          <option value="netProfit">Net Profit</option>
-          <option value="sharpe">Sharpe Ratio</option>
-          <option value="winRate">Win Rate</option>
-          <option value="profitFactor">Profit Factor</option>
-        </select>
-      </div>
-    </section>
+<section class="card">
+<h2>3. Strategy Filters</h2>
+<div class="filter-grid">
+<label><input type="checkbox" id="no_trade_monday" checked> No new trades on Monday</label>
+<label><input type="checkbox" id="no_trade_monthly_exp"> No new trades on monthly expiry day</label>
+<label><input type="checkbox" id="exit_on_monthly" checked> Exit on monthly expiry day</label>
+<label><input type="checkbox" id="use_candle_exit" checked> Exit after X candles</label>
+</div>
+<div class="filter-row">
+<label>Expiry Day</label>
+<select id="expiry_dow_str"><option>Monday</option><option selected>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
+<label>Max Candles</label>
+<input type="number" id="max_candles" value="300" min="1" max="9999">
+<label>Exit Window</label>
+<input type="text" id="monthly_exit_time" value="1510-1520">
+</div>
+<div class="filter-row">
+<label>Sort By</label>
+<select id="sortMetric"><option value="netProfit">Net Profit</option><option value="sharpe">Sharpe Ratio</option><option value="winRate">Win Rate</option><option value="profitFactor">Profit Factor</option></select>
+</div>
+</section>
 
-    <!-- Run Button -->
-    <div class="run-section">
-      <button id="runBtn" class="run-btn" disabled>Run Optimization</button>
-    </div>
+<div class="run-section">
+<button id="runBtn" class="run-btn" disabled>Run Optimization</button>
+</div>
 
-    <!-- Progress -->
-    <div id="progressWrap" class="progress-wrap" style="display:none;">
-      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
-      <p id="progressText" class="progress-text">Initializing...</p>
-    </div>
+<div id="progressWrap" class="progress-wrap">
+<div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+<p id="progressText" class="progress-text">Initializing...</p>
+</div>
 
-    <!-- Results -->
-    <section id="resultsCard" class="card" style="display:none;">
-      <div class="tabs">
-        <div class="tab active" data-tab="t`›H•ÜŒ™\İ[ÏÙ]‚ˆ]ˆÛ\ÜÏHXˆˆ]K]XH˜Ú\‘\]Z]Hİ\™OÙ]‚ˆÙ]‚‚ˆ]ˆYHX‹]X›H‚ˆ]ˆYHœİ]ÑÜšYˆÛ\ÜÏHœİ]ËYÜšYÙ]‚ˆX›HÛ\ÜÏHœ™\İ[Ë]X›H‚ˆXY‚ˆ‚ˆˆÏİ‚ˆ]K\ÛÜH›™]›Ùš]“™]›Ùš]İ‚ˆ]K\ÛÜHİ[˜Y\È•˜Y\Ïİ‚ˆ]K\ÛÜHÚ[”˜]H•Ú[ˆ	Oİ‚ˆ]K\ÛÜHœ›Ùš]˜XİÜˆ”İ‚ˆ]K\ÛÜHœÚ\œH”Ú\œOİ‚ˆ]K\ÛÜH›X^˜]ÙİÛˆ“X^İ‚ˆ]K\ÛÜH˜]™Õ˜YH]™ËÕ˜YOİ‚ˆ”\˜[Y]\œÏİ‚ˆİ‚ˆİXY‚ˆ›ÙHYHœ™\İ[Ğ›ÙHİ›ÙO‚ˆİX›O‚ˆÙ]‚‚ˆ]ˆYHX‹XÚ\ˆİ[OH™\Ü^N››Û™NÈ‚ˆÛ\ÜÏH›]]Y‘\]Z]Hİ\™H›ÜˆHÌH˜[šÙY\˜[Y]\ˆÙ]ˆÛXÚÈH›İÈ[ˆHX›HÈšY]È]ÛÛXš[˜][Û‰ÜÈ\]Z]Hİ\™KÜ‚ˆØ[˜\ÈYH™\]Z]PØ[˜\Èˆİ[OHÚYŒL	NÚZYÚÈØØ[˜\Ï‚ˆÙ]‚ˆÜÙXİ[Û‚‚ˆÙXİ[ÛˆYH™[\PØ\™ˆÛ\ÜÏH˜Ø\™‚ˆ]ˆÛ\ÜÏH™[\K\İ]H‚ˆ¼'äâÜ‚ˆ‘™]Ú]Hœ›ÛHXZÛÈš[˜[˜ÙH[™[ˆHÜ[Z^˜][ÛˆÈÙYH™\İ[È\™KÜ‚ˆÙ]‚ˆÜÙXİ[Û‚ˆÙ]‚‚ˆØÜš\Ü˜ÏHšœËŞXZÛËšœÏİLÈÜØÜš\‚ˆØÜš\Ü˜ÏHšœËØ\šœÏİMÜØÜš\‚Ø›ÙO‚Ú[‚
+<section id="resultsCard" class="card" style="display:none;">
+<div class="tabs">
+<div class="tab active" data-tab="table">Top 20 Results</div>
+<div class="tab" data-tab="chart">Equity Curve</div>
+</div>
+<div id="tab-table">
+<div id="statsGrid" class="stats-grid"></div>
+<table class="results-table">
+<thead><tr><th>#</th><th data-sort="netProfit">Net Profit</th><th data-sort="totalTrades">Trades</th><th data-sort="winRate">Win %</th><th data-sort="profitFactor">PF</th><th data-sort="sharpe">Sharpe</th><th data-sort="maxDrawdown">Max DD</th><th data-sort="avgTrade">Avg/Trade</th><th>Parameters</th></tr></thead>
+<tbody id="resultsBody"></tbody>
+</table>
+</div>
+<div id="tab-chart" style="display:none;">
+<p class="muted">Equity curve for the selected parameter set. Click a row in the table to view.</p>
+<canvas id="equityCanvas"></canvas>
+</div>
+</section>
+
+<section id="emptyCard" class="card">
+<div class="empty-state"><p>ğŸ“ˆ</p><p>Fetch data from Yahoo Finance and run the optimization to see results here.</p></div>
+</section>
+
+</div>
+
+<script>
+// ===== YAHOO FINANCE (inlined from yahoo.js) =====
+var YahooFinance = (function() {
+  var SYMBOLS = { "NIFTY 50": "^NSEI", "SENSEX": "^BSESN" };
+  var INTERVALS = { "1 min":"1m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
+  var RANGES = ["1mo","3mo","6mo","1y","2y","5y","10y","max"];
+  var CORS_PROXIES = [
+    function(u){return "https://corsproxy.io/?url="+encodeURIComponent(u)},
+    function(u){return "https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
+    function(u){return "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)}
+  ];
+
+  async function fetchCandles(symbol, interval, range, onProgress) {
+    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?interval="+interval+"&range="+range;
+    var data = null, lastError = null;
+
+    if (onProgress) onProgress("Fetching from Yahoo Finance...");
+    try {
+      var fnUrl = "/api/yahoo?symbol="+encodeURIComponent(symbol)+"&interval="+interval+"&range="+range;
+      var resp = await fetch(fnUrl);
+      if (resp.ok) data = await resp.json();
+    } catch(e) { lastError = e; }
+
+    if (!data) {
+      for (var i=0; i<CORS_PROXIES.length; i++) {
+        if (onProgress) onProgress("Trying proxy "+(i+1)+"/"+CORS_PROXIES.length+"...");
+        try {
+          var resp2 = await fetch(CORS_PROXIES[i](yahooUrl));
+          if (resp2.ok) { data = JSON.parse(await resp2.text()); if (data&&data.chart&&data.chart.result) break; data=null; }
+        } catch(e) { lastError=e; }
+      }
+    }
+
+    if (!data||!data.chart||!data.chart.result) throw new Error("Could not fetch from Yahoo Finance. "+(lastError?"("+lastError.message+")":""));
+
+    var result = data.chart.result[0];
+    var ts = result.timestamp||[];
+    var q = result.indicators.quote[0];
+    var candles = [];
+    for (var i=0; i<ts.length; i++) {
+      if (q.open[i]==null||q.high[i]==null||q.low[i]==null||q.close[i]==null) continue;
+      candles.push({time:ts[i]*1000,open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i],volume:q.volume?q.volume[i]||0:0});
+    }
+    var csvText = "Date,Open,High,Low,Close,Volume\n";
+    for (var c of candles) {
+      var d = new Date(c.time);
+      csvText += d.toISOString().slice(0,10)+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
+    }
+    return {candles:candles, csvText:csvText, meta:result.meta||{}};
+  }
+
+  return { fetchCandles:fetchCandles, SYMBOLS:SYMBOLS, INTERVALS:INTERVALS, RANGES:RANGES };
+})();
+</script>
+
+<script>
+// ===== APP (inlined from app.js) =====
+(function() {
+  "use strict";
+  var csvText = null, worker = null, topResults = [], currentSort = "netProfit", sortDesc = true;
+  function $(id) { return document.getElementById(id); }
+
+  var yahooSymbol = $("yahooSymbol"), yahooInterval = $("yahooInterval"), yahooRange = $("yahooRange");
+  var yahooBtn = $("yahooBtn"), yahooStatus = $("yahooStatus"), candleCount = $("candleCount"), runBtn = $("runBtn");
+
+  // Populate dropdowns
+  if (yahooSymbol && yahooInterval && yahooRange) {
+    Object.entries(YahooFinance.SYMBOLS).forEach(function(e) {
+      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooSymbol.appendChild(o);
+    });
+    Object.entries(YahooFinance.INTERVALS).forEach(function(e) {
+      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooInterval.appendChild(o);
+    });
+    YahooFinance.RANGES.forEach(function(r) {
+      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10+ years)":r;
+      if (r==="1y") o.selected=true; yahooRange.appendChild(o);
+    });
+  }
+
+  if (yahooBtn) yahooBtn.addEventListener("click", async function() {
+    var symbol = yahooSymbol?yahooSymbol.value:"^NSEI", interval = yahooInterval?yahooInterval.value:"1d", range = yahooRange?yahooRange.value:"1y";
+    yahooBtn.disabled = true; yahooBtn.textContent = "Fetching...";
+    if (yahooStatus) { yahooStatus.style.display="block"; yahooStatus.className="yahoo-status loading"; yahooStatus.textContent="Connecting to Yahoo Finance..."; }
+    try {
+      var result = await YahooFinance.fetchCandles(symbol, interval, range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
+      csvText = result.csvText;
+      if (runBtn) runBtn.disabled = false;
+      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="\u2713 Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" \u2192 "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"; }
+      if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization.";
+    } catch(err) {
+      if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="\u2717 "+err.message; }
+    } finally {
+      yahooBtn.disabled = false; yahooBtn.textContent = "Fetch from Yahoo";
+    }
+  });
+
+  function getRanges() {
+    function rng(n) { var a=$(n+"_min"),b=$(n+"_max"); return [parseInt(a?a.value:"0"),parseInt(b?b.value:"99")]; }
+    function stp(n) { var e=$(n+"_step"); return parseInt(e?e.value:"1")||1; }
+    return { ranges:{engulf_min:rng("engulf_min"),doji_body_max:rng("doji_body_max"),activation_pts:rng("activation_pts"),lock_profit:rng("lock_profit"),profit_step:rng("profit_step"),trail_step:rng("trail_step")},
+             steps:{engulf_min:stp("engulf_min"),doji_body_max:stp("doji_body_max"),activation_pts:stp("activation_pts"),lock_profit:stp("lock_profit"),profit_step:stp("profit_step"),trail_step:stp("trail_step")} };
+  }
+  function getFixedParams() {
+    return { no_trade_monday:$("no_trade_monday")?$("no_trade_monday").checked:true, no_trade_monthly_exp:$("no_trade_monthly_exp")?$("no_trade_monthly_exp").checked:false,
+      exit_on_monthly:$("exit_on_monthly")?$("exit_on_monthly").checked:true, use_candle_exit:$("use_candle_exit")?$("use_candle_exit").checked:true,
+      expiry_dow_str:$("expiry_dow_str")?$("expiry_dow_str").value:"Tuesday", max_candles:parseInt($("max_candles")?$("max_candles").value:"300")||300,
+      monthly_exit_time:$("monthly_exit_time")?$("monthly_exit_time").value:"1510-1520" };
+  }
+  function getComboCount() { var r=getRanges(),keys=Object.keys(r.ranges),t=1; for(var k of keys){var mn=r.ranges[k][0],mx=r.ranges[k][1],s=r.steps[k]||1;t*=Math.max(0,Math.floor((mx-mn)/s)+1);} return t; }
+  function updateComboCount() {
+    var t=getComboCount(),el=$("comboCount"); if(!el) return;
+    if(t>5000000){el.style.color="#e74c3c";el.textContent=t.toLocaleString("en-IN")+" combinations â€” TOO MANYHX^LZÚˆßBˆ[ÙHYŠŒL
+^Ù[œİ[K˜ÛÛÜHˆÙŒÎXÌLˆÙ[^ÛÛ[]ÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÛXš[˜][ÛœÈ8 %X^HZÙHHÚ[KˆßBˆ[Ù^Ù[œİ[K˜ÛÛÜHˆÌØYMŒÙ[^ÛÛ[]ÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÛXš[˜][ÛœÈ8 %™XYHÈ[‹ˆßBˆBˆÈ™[™İ[—ÛZ[ˆ‹™ÚšWØ›ÙWÛX^‹˜Xİ]˜][Û—ÜÈ‹›ØÚ×Ü›Ùš]‹œ›Ùš]Üİ\‹˜Z[Üİ\—K™›Ü‘XXÚ
+[˜İ[ÛŠŠ^ÖÈ—ÛZ[ˆ‹—ÛX^‹—Üİ\—K™›Ü‘XXÚ
+[˜İ[ÛŠÊ^İ˜\ˆOI
+ŠÜÊNÚYŠJYK˜Y]™[\İ[™\Šš[œ]‹\]PÛÛX›ĞÛİ[
+NßJNßJNÂˆ\]PÛÛX›ĞÛİ[
+
+NÂ‚ˆYˆ
+[ŠH[‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
+HÂˆYŠXÜİ•^
+H™]\›Âˆ˜\ˆØÏYÙ]ÛÛX›ĞÛİ[
+
+NÈYŠØÏL
+^İ˜\ˆÏI
+œ›ÙÜ™\ÜÕÜ˜\ŠNÚYŠÊ\Ëœİ[K™\Ü^OH˜›ØÚÈİ˜\ˆI
+œ›ÙÜ™\ÜÕ^ŠNÚYŠ
+\^ÛÛ[H‘\œ›ÜˆŠØØËÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÈX[Kˆ[˜Ü™X\ÙHİ\Ú^™\ËˆÜ™]\›ßBˆ[‹™\ØX›Y]YNÈ˜\ˆÏI
+œ›ÙÜ™\ÜÕÜ˜\ŠNÚYŠÊ\Ëœİ[K™\Ü^OH˜›ØÚÈÈ˜\ˆI
+œ›ÙÜ™\ÜÑš[ŠNÚYŠŠ\‹œİ[KÚYHŒ	HÈ˜\ˆI
+œ›ÙÜ™\ÜÕ^ŠNÚYŠ
+\^ÛÛ[H’[š]X[^š[™Ë‹‹ˆÂˆ˜\ˆYÙ]˜[™Ù\Ê
+KœYÙ]š^Y\˜[\Ê
+KÛOI
+œÛÜY]šXÈŠOÉ
+œÛÜY]šXÈŠK˜[YNˆ›™]›Ùš]ÂˆYŠÛÜšÙ\ŠHÛÜšÙ\‹\›Z[˜]J
+NÂˆÛÜšÙ\[™]ÈÛÜšÙ\ŠšœËİÛÜšÙ\‹šœÏİHŠÑ]K››İÊ
+JNÂˆÛÜšÙ\‹›Û›Y\ÜØYÙOY[˜İ[ÛŠJ^İ˜\ˆOYK™]Nİ˜\ˆI
+œ›ÙÜ™\ÜÕ^ŠKŒI
+œ›ÙÜ™\ÜÑš[ŠKÌI
+œ›ÙÜ™\ÜÕÜ˜\ŠNÂˆYŠK\OOOHœ\œÙYŠ^ÚYŠŠ\‹^ÛÛ[[K˜Ø[™PÛİ[
+ÈˆØ[™\È\œÙYˆİÙY\[™Ë‹‹ˆßBˆ[ÙHYŠK\OOOHœ›ÙÜ™\ÜÈŠ^İ˜\ˆJK™Û™KÛKİ[
+JŒLÚYŠŒŠ\Œ‹œİ[KÚY\
+È‰HÚYŠŠ\‹^ÛÛ[[K™Û™JÈˆÈŠÛKİ[
+Èˆ
+ŠÜÑš^Y
+JJÈ‰JHßBˆ[ÙHYŠK\OOOH™Û™HŠ^İÜ™\İ[Ï[Kœ™\İ[ÜÚYŠÌŠ\Ì‹œİ[K™\Ü^OH››Û™HÜ[‹™\ØX›YY˜[ÙNÜ™[™\”™\İ[ÊKœ™\İ[
+NßBˆ[ÙHYŠK\OOOH™\œ›ÜˆŠ^ÚYŠŠ\‹^ÛÛ[H‘\œ›ÜˆŠÛK›Y\ÜØYÙNÜ[‹™\ØX›YY˜[ÙNßBˆ[ÙHYŠK\OOOHœÚ[™ÛQÛ™HŠ^Ù˜]ĞÚ\
+Kœ™\İ[™\]Z]JNßBˆNÂˆÛÜšÙ\‹›Û™\œ›ÜY[˜İ[ÛŠJ^ÚYŠ
+\^ÛÛ[H•ÛÜšÙ\ˆ\œ›ÜˆŠÊK›Y\ÜØYÙ_[šÛ›İÛˆŠNÜ[‹™\ØX›YY˜[ÙNßNÂˆÛÜšÙ\‹œÜİY\ÜØYÙJİ\Nˆ›Ü[Z^™H‹Üİ•^˜Üİ•^˜[™Ù\Îœ‹œ˜[™Ù\Ëš^Y\˜[\Î™œİ\Îœ‹œİ\ËÛÜY]šXÎœÛ_JNÂˆJNÂ‚ˆ[˜İ[Ûˆ›]
+‹XÊ^ÙXÏYXßÚYŠZ\Ñš[š]JŠJ\™]\›ˆ—LŒŒYHÜ™]\›ˆ[X™\ŠŠKÓØØ[Tİš[™Ê™[‹RSˆ‹ÛZ[š[][Qœ˜Xİ[Û‘YÚ]Î™XËX^[][Qœ˜Xİ[Û‘YÚ]Î™XßJNßBˆ[˜İ[Ûˆ™[™\”™\İ[Ê™\İ[
+HÂˆ˜\ˆXÏI
+™[\PØ\™ŠK˜ÏI
+œ™\İ[ĞØ\™ŠNÚYŠXÊYXËœİ[K™\Ü^OH››Û™HÚYŠ˜Ê\˜Ëœİ[K™\Ü^OH˜›ØÚÈÂˆ˜\ˆ™\İ\™\İ[ÜÌ_ÛY]šXÜÎß_KÙÏI
+œİ]ÑÜšYŠNÂˆYŠÙÊ^İ˜\ˆİ]ÏVŞİ˜[œ™\İ[İ[\İYÓØØ[Tİš[™Ê™[‹RSˆŠKX™[ˆÛÛX›ÜÈ\İYŸKİ˜[œ™\İ[Ü›[™İX™[ˆ•Ü™\İ[ÈŸKİ˜[™›]
+™\İ›Y]šXÜË›™]›Ùš]
+KX™[ˆ™\İ™]›Ùš]ŸKİ˜[™›]
+™\İ›Y]šXÜËÚ[”˜]KJJÈ‰H‹X™[ˆ™\İÚ[ˆ˜]HŸKİ˜[™›]
+™\İ›Y]šXÜËœÚ\œKŠKX™[ˆ™\İÚ\œHŸWNÂˆÙËš[›™\’S\İ]Ë›X\
+[˜İ[ÛŠÊ^Ü™]\›‰Ï]ˆÛ\ÜÏHœİ]Z][H]ˆÛ\ÜÏHœİ]]˜[‰ÊÜË˜[
+ÉÏÙ]]ˆÛ\ÜÏHœİ][X™[‰ÊÜË›X™[
+ÉÏÙ]Ù]‰ÎßJKš›Ú[ŠˆŠNßBˆ™[™\•X›J
+NÈ™[™\Ú\
+
+NÂˆBˆ[˜İ[Ûˆ™[™\•X›J
+HÂˆ˜\ˆI
+œ™\İ[Ğ›ÙHŠNÈYŠ]ŠH™]\›Âˆ‹š[›™\’S]Ü™\İ[Ë›X\
+[˜İ[ÛŠ‹J^İ˜\ˆO\‹›Y]šXÜËÏ[K›™]›Ùš]LÈœÜÈˆ›™YÈÂˆ˜\ˆÏSØš™Xİ™[šY\Ê‹œ\˜[\ÊK™š[\Š[˜İ[ÛŠÊ^Ü™]\›–È™[™İ[—ÛZ[ˆ‹™ÚšWØ›ÙWÛX^‹˜Xİ]˜][Û—ÜÈ‹›ØÚ×Ü›Ùš]‹œ›Ùš]Üİ\‹˜Z[Üİ\—Kš[™^ÙŠÖÌJOLßJK›X\
+[˜İ[ÛŠÊ^Ü™]\›ˆÖÌKœÜ]
+—ÈŠVÌJÈHŠÚÖÌWNßJKš›Ú[Š‹ŠNÂˆ™]\›‰Ïˆ]KZYH‰ÊÚJÉÈ‰ÊÊJÌJJÉÏİÛ\ÜÏH‰ÊÜÊÉÈ‰ÊÙ›]
+K›™]›Ùš]
+JÉÏİ‰ÊÛKİ[˜Y\ÊÉÏİ‰ÊÙ›]
+KÚ[”˜]KJJÉÉOİ‰ÊÙ›]
+Kœ›Ùš]˜XİÜ‹ŠJÉÏİ‰ÊÙ›]
+KœÚ\œKŠJÉÏİ‰ÊÙ›]
+K›X^˜]ÙİÛ‹
+JÉÏİ‰ÊÙ›]
+K˜]™Õ˜YKJJÉÏİÛ\ÜÏHœ\˜[\ËXÙ[‰ÊÜÊÉÏİİ‰ÎÂˆJKš›Ú[ŠˆŠNÂˆ‹œ]Y\TÙ[XİÜ[
+ˆŠK™›Ü‘XXÚ
+[˜İ[ÛŠŠ^İ‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
+^İ‹œ]Y\TÙ[XİÜ[
+ˆŠK™›Ü‘XXÚ
+[˜İ[ÛŠŠ^Ü‹˜Û\ÜÓ\İœ™[[İ™J˜Xİ]™HŠNßJNİ‹˜Û\ÜÓ\İ˜Y
+˜Xİ]™HŠNÜ™[™\Ú\
+\œÙR[
+‹™]\Ù]šY
+JNİ˜\ˆİYØİ[Y[œ]Y\TÙ[XİÜŠ	ËX–Ù]K]XH˜Ú\—IÊNÚYŠİ
+Xİ˜ÛXÚÊ
+NßJNßJNÂˆBˆ[˜İ[Ûˆ™[™\Ú\
+Y
+^İ˜\ˆ]Ü™\İ[ÖÚYNÚYŠ\Š\™]\›ÚYŠÛÜšÙ\Š]ÛÜšÙ\‹œÜİY\ÜØYÙJİ\NˆœÚ[™ÛH‹Üİ•^˜Üİ•^\˜[\Îœ‹œ\˜[\ßJNßBˆ[˜İ[Ûˆ˜]ĞÚ\
+\]Z]J^Âˆ˜\ˆØ[˜\ÏI
+™\]Z]PØ[˜\ÈŠNÚYŠXØ[˜\Ê\™]\›İ˜\ˆİXØ[˜\Ë™Ù]ÛÛ^
+Œ™ŠNİ˜\ˆÏXØ[˜\ËÚYXØ[˜\Ë›Ù™œÙ]ÚYXØ[˜\ËšZYÚXØ[˜\Ë›Ù™œÙ]ZYÚØİ˜ÛX\”™Xİ
+Ë
+NÂˆYŠY\]Z]_\]Z]K›[™İOOL
+^Øİ™š[İ[OHˆÎNNHØİ™›ÛHŒMØ[œË\Ù\šYˆØİ^[YÛH˜Ù[\ˆØİ™š[^
+“›È˜Y\È‹ËÌ‹ÌŠNÜ™]\›ßBˆ˜\ˆ˜[ÏY\]Z]K›X\
+[˜İ[ÛŠJ^Ü™]\›ˆK™\]Z]NßJKZ[•SX]›Z[‹˜\J[˜[Ë˜ÛÛ˜Ø]
+ÌJJKX^SX]›X^˜\J[˜[Ë˜ÛÛ˜Ø]
+ÌWJJK˜[™ÙO[X^‹[Z[•ŸKYMÂˆİœİ›ÚÙTİ[OHˆÍˆØİ›[™UÚYLNØİ˜™YÚ[”]
+
+NØİ›[İ™UÊY\YJ
+[Z[•ŠKÜ˜[™ÙJJŠLŠœY
+JNØİ›[™UÊË\Y\YJ
+[Z[•ŠKÜ˜[™ÙJJŠLŠœY
+JNØİœİ›ÚÙJ
+NÂˆİœİ›ÚÙTİ[OHˆÍ˜ÌÙÈØİ›[™UÚYLØİ˜™YÚ[”]
+
+NÙ\]Z]K™›Ü‘XXÚ
+[˜İ[ÛŠJ^İ˜\ˆ\Y
+ÊKÓX]›X^
+K\]Z]K›[™İLJJJŠËLŠœY
+KOR\YJ
+™\]Z]K[Z[•ŠKÜ˜[™ÙJJŠLŠœY
+NÚYŠOOOL
+Xİ›[İ™UÊJNÙ[ÙHİ›[™UÊJNßJNØİœİ›ÚÙJ
+NÂˆİ›[™UÊY
+ÊËLŠœY
+K\Y
+NØİ›[™UÊY\Y
+NØİ˜ÛÜÙT]
+
+NØİ™š[İ[OHœ™Ø˜JÎKNMKËŒMJHØİ™š[
+
+NÂˆBˆØİ[Y[œ]Y\TÙ[XİÜ[
+‹XˆŠK™›Ü‘XXÚ
+[˜İ[ÛŠXŠ^İX‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
+^ÙØİ[Y[œ]Y\TÙ[XİÜ[
+‹XˆŠK™›Ü‘XXÚ
+[˜İ[ÛŠ
+^İ˜Û\ÜÓ\İœ™[[İ™J˜Xİ]™HŠNßJNİX‹˜Û\ÜÓ\İ˜Y
+˜Xİ]™HŠNİ˜\ˆI
+X‹]X›HŠKÏI
+X‹XÚ\ŠNÚYŠ
+]œİ[K™\Ü^O]X‹™]\Ù]XOOHX›HÈ˜›ØÚÈˆ››Û™HÚYŠÊ]Ëœİ[K™\Ü^O]X‹™]\Ù]XOOH˜Ú\È˜›ØÚÈˆ››Û™HÚYŠX‹™]\Ù]XOOH˜Ú\Š^İ˜\ˆ\YØİ[Y[œ]Y\TÙ[XİÜŠˆÜ™\İ[Ğ›ÙH‹˜Xİ]™HŠ_Øİ[Y[œ]Y\TÙ[XİÜŠˆÜ™\İ[Ğ›ÙHˆŠNÚYŠ\Š\™[™\Ú\
+\œÙR[
+\‹™]\Ù]šY
+JNß_JNßJNÂˆØİ[Y[œ]Y\TÙ[XİÜ[
+Ù]K\ÛÜHŠK™›Ü‘XXÚ
+[˜İ[ÛŠ
+^İ˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
+^İ˜\ˆO]™]\Ù]œÛÜÚYŠİ\œ™[ÛÜOO[J\ÛÜ\ØÏH\ÛÜ\ØÎÙ[Ù^Øİ\œ™[ÛÜ[NÜÛÜ\ØÏ]YNß]Ü™\İ[ËœÛÜ
+[˜İ[ÛŠKŠ^İ˜\ˆ]XK›Y]šXÜÖÛWKX‹›Y]šXÜÖÛWNÚYŠ\Ñš[š]J]ŠI‰š\Ñš[š]JŠJ\™]\›ˆÛÜ\ØÏØ‹X]˜]‹XÜ™]\›ˆßJNÜ™[™\•X›J
+NßJNßJNÂŸJJ
+NÂÜØÜš\‚Ø›ÙO‚Ú[‚
