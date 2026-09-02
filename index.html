@@ -4,171 +4,185 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NIFTY Strategy Optimizer — Parameter Sweep & Backtester</title>
-  <meta name="description" content="Fetch live data from Yahoo Finance, sweep all parameter combinations (0-99), and find the top 20 best-performing configurations for the NIFTY engulfing-doji-TSL strategy.">
-  <link rel="stylesheet" href="css/styles.css">
+  <link rel="stylesheet" href="css/styles.css?v=2">
 </head>
 <body>
-  <header>
-    <h1>NIFTY Strategy <span>Optimizer</span></h1>
-    <p>Fetch live data from Yahoo Finance · Sweep all parameter combinations (0–99) · Get top 20 results</p>
-  </header>
-
   <div class="container">
-    <div class="grid">
-      <!-- LEFT: Config Panel -->
-      <div>
-        <div class="card">
-          <h2>1. Fetch Data</h2>
+    <header>
+      <h1>📊 NIFTY Strategy Optimizer</h1>
+      <p class="subtitle">Fetch live data from Yahoo Finance · Sweep all parameter combinations · Get top 20 results</p>
+    </header>
 
-          <!-- Yahoo Finance fetcher -->
-          <div class="yahoo-section">
-            <div class="yahoo-row">
-              <select id="yahooSymbol" class="yahoo-select"></select>
-              <select id="yahooInterval" class="yahoo-select"></select>
-              <select id="yahooRange" class="yahoo-select"></select>
-            </div>
-            <button class="btn btn-yahoo" id="yahooBtn">Fetch from Yahoo</button>
-            <div class="yahoo-status" id="yahooStatus" style="display:none"></div>
-            <div class="hint" id="candleCount"></div>
-          </div>
-        </div>
+    <!-- 1. Fetch Data -->
+    <section class="card">
+      <h2>1. Fetch Data</h2>
+      <div class="yahoo-row">
+        <select id="yahooSymbol"></select>
+        <select id="yahooInterval"></select>
+        <select id="yahooRange"></select>
+        <button id="yahooBtn">Fetch from Yahoo</button>
+      </div>
+      <div id="yahooStatus" class="yahoo-status" style="display:none;"></div>
+      <p id="candleCount" class="muted">No data fetched yet.</p>
+    </section>
 
-        <div class="card">
-          <h2>2. Parameter Sweep Ranges</h2>
-          <p class="hint" style="margin-bottom:0.75rem">Set min/max for each parameter. Default: 0–99 with step 1.</p>
-
-          <div class="param-row">
-            <label>Engulfing Min Body</label>
+    <!-- 2. Parameter Sweep Ranges -->
+    <section class="card">
+      <h2>2. Parameter Sweep Ranges</h2>
+      <p class="muted">Set min/max for each parameter. Default range 0–99 with step 5. <strong>Keep total combinations under 20 lakh.</strong></p>
+      
+      <div class="param-grid">
+        <div class="param-item">
+          <label>Engulfing Min Body</label>
+          <div class="range-row">
             <input type="number" id="engulf_min_min" value="0" min="0" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="engulf_min_max" value="99" min="0" max="99">
-            <input type="number" id="engulf_min_step" value="4" min="1" max="99" title="Step">
+            <span>to</span>
+            <input type="number" id="engulf_min_max" value="50" min="0" max="99">
+            <span>step</span>
+            <input type="number" id="engulf_min_step" value="5" min="1" max="99">
           </div>
-          <div class="param-row">
-            <label>Doji Body Max</label>
+        </div>
+        <div class="param-item">
+          <label>Doji Body Max</label>
+          <div class="range-row">
             <input type="number" id="doji_body_max_min" value="0" min="0" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="doji_body_max_max" value="99" min="0" max="99">
-            <input type="number" id="doji_body_max_step" value="4" min="1" max="99" title="Step">
+            <span>to</span>
+            <input type="number" id="doji_body_max_max" value="20" min="0" max="99">
+            <span>step</span>
+            <input type="number" id="doji_body_max_step" value="2" min="1" max="99">
           </div>
-          <div class="param-row">
-            <label>Activate At (TSL)</label>
+        </div>
+        <div class="param-item">
+          <label>Activate At (TSL)</label>
+          <div class="range-row">
             <input type="number" id="activation_pts_min" value="0" min="0" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="activation_pts_max" value="99" min="0" max="99">
-            <input type="number" id="activation_pts_step" value="5" min="1" max="99" title="Step">
+            <span>to</span>
+            <input type="number" id="activation_pts_max" value="50" min="0" max="99">
+            <span>step</span>
+            <input type="number" id="activation_pts_step" value="5" min="1" max="99">
           </div>
-          <div class="param-row">
-            <label>Lock Profit At</label>
+        </div>
+        <div class="param-item">
+          <label>Lock Profit At</label>
+          <div class="range-row">
             <input type="number" id="lock_profit_min" value="0" min="0" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="lock_profit_max" value="99" min="0" max="99">
-            <input type="number" id="lock_profit_step" value="4" min="1" max="99" title="Step">
+            <span>to</span>
+            <input type="number" id="lock_profit_max" value="50" min="0" max="99">
+            <span>step</span>
+            <input type="number" id="lock_profit_step" value="5" min="1" max="99">
           </div>
-          <div class="param-row">
-            <label>Profit Step</label>
+        </div>
+        <div class="param-item">
+          <label>Profit Step</label>
+          <div class="range-row">
             <input type="number" id="profit_step_min" value="1" min="1" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="profit_step_max" value="99" min="0" max="99">
-            <input type="number" id="profit_step_step" value="5" min="1" max="99" title="Step">
+            <span>to</span>
+            <input type="number" id="profit_step_max" value="30" min="1" max="99">
+            <span>step</span>
+            <input type="number" id="profit_step_step" value="3" min="1" max="99">
           </div>
-          <div class="param-row">
-            <label>Trail Step</label>
+        </div>
+        <div class="param-item">
+          <label>Trail Step</label>
+          <div class="range-row">
             <input type="number" id="trail_step_min" value="1" min="1" max="99">
-            <span class="range-label">to</span>
-            <input type="number" id="trail_step_max" value="99" min="0" max="99">
-            <input type="number" id="trail_step_step" value="5" min="1" max="99" title="Step">
-          </div>
-        </div>
-
-        <div class="card">
-          <h2>3. Strategy Filters</h2>
-          <div class="checkbox-row"><input type="checkbox" id="no_trade_monday" checked><label for="no_trade_monday">No new trades on Monday</label></div>
-          <div class="checkbox-row"><input type="checkbox" id="no_trade_monthly_exp"><label for="no_trade_monthly_exp">No new trades on monthly expiry day</label></div>
-          <div class="checkbox-row"><input type="checkbox" id="exit_on_monthly" checked><label for="exit_on_monthly">Exit on monthly expiry day</label></div>
-          <div class="checkbox-row"><input type="checkbox" id="use_candle_exit" checked><label for="use_candle_exit">Exit after X candles</label></div>
-
-          <div class="param-row" style="margin-top:0.6rem">
-            <label>Expiry Day of Week</label>
-            <select id="expiry_dow_str">
-              <option>Monday</option><option selected>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option>
-            </select>
-          </div>
-          <div class="param-row">
-            <label>Max Candles In Trade</label>
-            <input type="number" id="max_candles" value="300" min="1">
-          </div>
-          <div class="param-row">
-            <label>Monthly Exit Window</label>
-            <input type="text" id="monthly_exit_time" value="1510-1520" style="width:100%">
-          </div>
-
-          <div class="param-row" style="margin-top:0.6rem">
-            <label>Sort Results By</label>
-            <select id="sortMetric">
-              <option value="netProfit" selected>Net Profit</option>
-              <option value="sharpe">Sharpe Ratio</option>
-              <option value="winRate">Win Rate</option>
-              <option value="profitFactor">Profit Factor</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="card">
-          <button class="btn" id="runBtn" disabled>Run Optimization</button>
-          <div class="progress-wrap" id="progressWrap">
-            <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
-            <div class="progress-text" id="progressText">Initializing...</div>
+            <span>to</span>
+            <input type="number" id="trail_step_max" value="30" min="1" max="99">
+            <span>step</span>
+            <input type="number" id="trail_step_step" value="3" min="1" max="99">
           </div>
         </div>
       </div>
+      <div id="comboCount" class="combo-count" style="font-weight:600; margin-top:12px;"></div>
+    </section>
 
-      <!-- RIGHT: Results -->
-      <div>
-        <div class="card" id="resultsCard" style="display:none">
-          <div class="stats-grid" id="statsGrid"></div>
-
-          <div class="tabs">
-            <div class="tab active" data-tab="table">Top 20 Results</div>
-            <div class="tab" data-tab="chart">Equity Curve</div>
-          </div>
-
-          <div id="tab-table">
-            <div class="table-wrap">
-              <table id="resultsTable">
-                <thead>
-                  <tr>
-                    <th>#</th>
-                    <th data-sort="netProfit">Net Profit</th>
-                    <th data-sort="totalTrades">Trades</th>
-                    <th data-sort="winRate">Win %</th>
-                    <th data-sort="profitFactor">PF</th>
-                    <th data-sort="sharpe">Sharpe</th>
-                    <th data-sort="maxDrawdown">Max DD</th>
-                    <th data-sort="avgTrade">Avg/Trade</th>
-                    <th>Parameters</th>
-                  </tr>
-                </thead>
-                <tbody id="resultsBody"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <div id="tab-chart" style="display:none">
-            <canvas id="chartCanvas"></canvas>
-            <p class="hint" style="text-align:center;margin-top:0.5rem">Equity curve for the #1 ranked parameter set. Click a row in the table to view that combination's equity curve.</p>
-          </div>
-        </div>
-
-        <div class="card" id="emptyCard">
-          <div class="empty-state">
-            <div class="icon">📈</div>
-            <p>Fetch data from Yahoo Finance and run the optimization to see results here.</p>
-          </div>
-        </div>
+    <!-- 3. Strategy Filters -->
+    <section class="card">
+      <h2>3. Strategy Filters</h2>
+      <div class="filter-grid">
+        <label><input type="checkbox" id="no_trade_monday" checked> No new trades on Monday</label>
+        <label><input type="checkbox" id="no_trade_monthly_exp"> No new trades on monthly expiry day</label>
+        <label><input type="checkbox" id="exit_on_monthly" checked> Exit on monthly expiry day</label>
+        <label><input type="checkbox" id="use_candle_exit" checked> Exit after X candles</label>
       </div>
+      <div class="filter-row">
+        <label>Expiry Day of Week</label>
+        <select id="expiry_dow_str">
+          <option>Monday</option>
+          <option selected>Tuesday</option>
+          <option>Wednesday</option>
+          <option>Thursday</option>
+          <option>Friday</option>
+        </select>
+        <label>Max Candles In Trade</label>
+        <input type="number" id="max_candles" value="300" min="1" max="9999">
+        <label>Monthly Exit Window</label>
+        <input type="text" id="monthly_exit_time" value="1510-1520">
+      </div>
+      <div class="filter-row">
+        <label>Sort Results By</label>
+        <select id="sortMetric">
+          <option value="netProfit">Net Profit</option>
+          <option value="sharpe">Sharpe Ratio</option>
+          <option value="winRate">Win Rate</option>
+          <option value="profitFactor">Profit Factor</option>
+        </select>
+      </div>
+    </section>
+
+    <!-- Run Button -->
+    <div class="run-section">
+      <button id="runBtn" class="run-btn" disabled>Run Optimization</button>
     </div>
+
+    <!-- Progress -->
+    <div id="progressWrap" class="progress-wrap" style="display:none;">
+      <div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+      <p id="progressText" class="progress-text">Initializing...</p>
+    </div>
+
+    <!-- Results -->
+    <section id="resultsCard" class="card" style="display:none;">
+      <div class="tabs">
+        <div class="tab active" data-tab="table">Top 20 Results</div>
+        <div class="tab" data-tab="chart">Equity Curve</div>
+      </div>
+
+      <div id="tab-table">
+        <div id="statsGrid" class="stats-grid"></div>
+        <table class="results-table">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th data-sort="netProfit">Net Profit</th>
+              <th data-sort="totalTrades">Trades</th>
+              <th data-sort="winRate">Win %</th>
+              <th data-sort="profitFactor">PF</th>
+              <th data-sort="sharpe">Sharpe</th>
+              <th data-sort="maxDrawdown">Max DD</th>
+              <th data-sort="avgTrade">Avg/Trade</th>
+              <th>Parameters</th>
+            </tr>
+          </thead>
+          <tbody id="resultsBody"></tbody>
+        </table>
+      </div>
+
+      <div id="tab-chart" style="display:none;">
+        <p class="muted">Equity curve for the #1 ranked parameter set. Click a row in the table to view that combination's equity curve.</p>
+        <canvas id="equityCanvas" style="width:100%;height:400px;"></canvas>
+      </div>
+    </section>
+
+    <section id="emptyCard" class="card">
+      <div class="empty-state">
+        <p>📈</p>
+        <p>Fetch data from Yahoo Finance and run the optimization to see results here.</p>
+      </div>
+    </section>
   </div>
 
-  <script src="js/yahoo.js"></script>
-  <script src="js/app.js"></script>
+  <script src="js/yahoo.js?v=2"></script>
+  <script src="js/app.js?v=3"></script>
+</body>
+</html>
