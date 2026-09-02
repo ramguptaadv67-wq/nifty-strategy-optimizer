@@ -93,14 +93,14 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 
 <section class="card">
 <h2>2. Parameter Sweep Ranges</h2>
-<p class="muted">Set min/max for each parameter. Default range 0-99 with step 10. Max 50 lakh combinations.</p>
+<p class="muted">Set min/max for each parameter. Every value in the range is tested. Max 50 lakh combinations.</p>
 <div class="param-grid">
-<div class="param-item"><label>Engulfing Min Body</label><div class="range-row"><input type="number" id="engulf_min_min" value="0" min="0" max="99"><span>to</span><input type="number" id="engulf_min_max" value="99" min="0" max="99"><span>step</span><input type="number" id="engulf_min_step" value="10" min="1" max="99"></div></div>
-<div class="param-item"><label>Doji Body Max</label><div class="range-row"><input type="number" id="doji_body_max_min" value="0" min="0" max="99"><span>to</span><input type="number" id="doji_body_max_max" value="99" min="0" max="99"><span>step</span><input type="number" id="doji_body_max_step" value="10" min="1" max="99"></div></div>
-<div class="param-item"><label>Activate At (TSL)</label><div class="range-row"><input type="number" id="activation_pts_min" value="0" min="0" max="99"><span>to</span><input type="number" id="activation_pts_max" value="99" min="0" max="99"><span>step</span><input type="number" id="activation_pts_step" value="10" min="1" max="99"></div></div>
-<div class="param-item"><label>Lock Profit At</label><div class="range-row"><input type="number" id="lock_profit_min" value="0" min="0" max="99"><span>to</span><input type="number" id="lock_profit_max" value="99" min="0" max="99"><span>step</span><input type="number" id="lock_profit_step" value="10" min="1" max="99"></div></div>
-<div class="param-item"><label>Profit Step</label><div class="range-row"><input type="number" id="profit_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="profit_step_max" value="99" min="1" max="99"><span>step</span><input type="number" id="profit_step_step" value="10" min="1" max="99"></div></div>
-<div class="param-item"><label>Trail Step</label><div class="range-row"><input type="number" id="trail_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="trail_step_max" value="99" min="1" max="99"><span>step</span><input type="number" id="trail_step_step" value="10" min="1" max="99"></div></div>
+<div class="param-item"><label>Engulfing Min Body</label><div class="range-row"><input type="number" id="engulf_min_min" value="0" min="0" max="99"><span>to</span><input type="number" id="engulf_min_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Doji Body Max</label><div class="range-row"><input type="number" id="doji_body_max_min" value="0" min="0" max="99"><span>to</span><input type="number" id="doji_body_max_max" value="9" min="0" max="99"></div></div>
+<div class="param-item"><label>Activate At (TSL)</label><div class="range-row"><input type="number" id="activation_pts_min" value="0" min="0" max="99"><span>to</span><input type="number" id="activation_pts_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Lock Profit At</label><div class="range-row"><input type="number" id="lock_profit_min" value="0" min="0" max="99"><span>to</span><input type="number" id="lock_profit_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Profit Step</label><div class="range-row"><input type="number" id="profit_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="profit_step_max" value="99" min="1" max="99"></div></div>
+<div class="param-item"><label>Trail Step</label><div class="range-row"><input type="number" id="trail_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="trail_step_max" value="99" min="1" max="99"></div></div>
 </div>
 <div id="comboCount" class="combo-count"></div>
 </section>
@@ -161,7 +161,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 </div>
 
 <script>
-// ===== YAHOO FINANCE (inlined from yahoo.js) =====
+// ===== YAHOO FINANCE (inlined from yahoo.js) =====4
 var YahooFinance = (function() {
   var SYMBOLS = { "NIFTY 50": "^NSEI", "SENSEX": "^BSESN" };
   var INTERVALS = { "1 min":"1m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
@@ -258,9 +258,7 @@ var YahooFinance = (function() {
 
   function getRanges() {
     function rng(n) { var a=$(n+"_min"),b=$(n+"_max"); return [parseInt(a?a.value:"0"),parseInt(b?b.value:"99")]; }
-    function stp(n) { var e=$(n+"_step"); return parseInt(e?e.value:"1")||1; }
-    return { ranges:{engulf_min:rng("engulf_min"),doji_body_max:rng("doji_body_max"),activation_pts:rng("activation_pts"),lock_profit:rng("lock_profit"),profit_step:rng("profit_step"),trail_step:rng("trail_step")},
-             steps:{engulf_min:stp("engulf_min"),doji_body_max:stp("doji_body_max"),activation_pts:stp("activation_pts"),lock_profit:stp("lock_profit"),profit_step:stp("profit_step"),trail_step:stp("trail_step")} };
+    return { ranges:{engulf_min:rng("engulf_min"),doji_body_max:rng("doji_body_max"),activation_pts:rng("activation_pts"),lock_profit:rng("lock_profit"),profit_step:rng("profit_step"),trail_step:rng("trail_step")} };
   }
   function getFixedParams() {
     return { no_trade_monday:$("no_trade_monday")?$("no_trade_monday").checked:true, no_trade_monthly_exp:$("no_trade_monthly_exp")?$("no_trade_monthly_exp").checked:false,
@@ -268,21 +266,22 @@ var YahooFinance = (function() {
       expiry_dow_str:$("expiry_dow_str")?$("expiry_dow_str").value:"Tuesday", max_candles:parseInt($("max_candles")?$("max_candles").value:"300")||300,
       monthly_exit_time:$("monthly_exit_time")?$("monthly_exit_time").value:"1510-1520" };
   }
-  function getComboCount() { var r=getRanges(),keys=Object.keys(r.ranges),t=1; for(var k of keys){var mn=r.ranges[k][0],mx=r.ranges[k][1],s=r.steps[k]||1;t*=Math.max(0,Math.floor((mx-mn)/s)+1);} return t; }
+  function getComboCount() { var r=getRanges(),keys=Object.keys(r.ranges),t=1; for(var k of keys){var mn=r.ranges[k][0],mx=r.ranges[k][1];t*=Math.max(0,mx-mn+1);} return t; }
   function updateComboCount() {
     var t=getComboCount(),el=$("comboCount"); if(!el) return;
     if(t>5000000){el.style.color="#e74c3c";el.textContent=t.toLocaleString("en-IN")+" combinations - TOO MANY! Max 50 lakh.";}
     else if(t>100000){el.style.color="#f39c12";el.textContent=t.toLocaleString("en-IN")+" combinations - may take a while.";}
     else{el.style.color="#27ae60";el.textContent=t.toLocaleString("en-IN")+" combinations - ready to run.";}
   }
-  ["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].forEach(function(n){["_min","_max","_step"].forEach(function(s){var e=$(n+s);if(e)e.addEventListener("input",updateComboCount);});});
+  ["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].forEach(function(n){["_min","_max"].forEach(function(s){var e=$(n+s);if(e)e.addEventListener("input",updateComboCount);});});
   updateComboCount();
 
   if (runBtn) runBtn.addEventListener("click", function() {
     if(!csvText) return;
-    var cc=getComboCount(); if(cc>5000000){var pw=$("progressWrap");if(pw)pw.style.display="block";var pt=$("progressText");if(pt)pt.textContent="Error: "+cc.toLocaleString("en-IN")+" too many. Increase step sizes.";return;}
+    var cc=getComboCount();    if(cc>5000000){var pw=$("progressWrap");if(pw)pw.style.display="block";var pt=$("progressText");if(pt)pt.textContent="Error: "+cc.toLocaleString("en-IN")+" too many. Narrow your ranges.";return;}
     runBtn.disabled=true; var pw=$("progressWrap");if(pw)pw.style.display="block"; var pf=$("progressFill");if(pf)pf.style.width="0%"; var pt=$("progressText");if(pt)pt.textContent="Initializing...";
     var r=getRanges(),fp=getFixedParams(),sm=$("sortMetric")?$("sortMetric").value:"netProfit";
+    var steps={}; Object.keys(r.ranges).forEach(function(k){steps[k]=1;});
     if(worker) worker.terminate();
     worker=new Worker("js/worker.js?v="+Date.now());
     worker.onmessage=function(e){var m=e.data;var pt2=$("progressText"),pf2=$("progressFill"),pw2=$("progressWrap");
@@ -293,7 +292,7 @@ var YahooFinance = (function() {
       else if(m.type==="singleDone"){drawChart(m.result.equity);}
     };
     worker.onerror=function(e){if(pt)pt.textContent="Worker Error: "+(e.message||"unknown");runBtn.disabled=false;};
-    worker.postMessage({type:"optimize",csvText:csvText,ranges:r.ranges,fixedParams:fp,steps:r.steps,sortMetric:sm});
+    worker.postMessage({type:"optimize",csvText:csvText,ranges:r.ranges,fixedParams:fp,steps:steps,sortMetric:sm});
   });
 
   function fmt(n,dec){dec=dec||2;if(!isFinite(n))return"N/A";return Number(n).toLocaleString("en-IN",{minimumFractionDigits:dec,maximumFractionDigits:dec});}
