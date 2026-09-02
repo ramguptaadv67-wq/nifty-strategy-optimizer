@@ -3,7 +3,8 @@
  * Imports engine.js, optimizer.js, csv.js via importScripts.
  * Posts progress and final results back to the main thread.
  */
-importScripts("engine.js", "optimizer.js", "csv.js");
+const v = "?v=" + Date.now();
+importScripts("engine.js" + v, "optimizer.js" + v, "csv.js" + v);
 
 self.onmessage = function (e) {
   const msg = e.data;
@@ -14,7 +15,7 @@ self.onmessage = function (e) {
       const candles = self.parseCSV(csvText);
 
       if (candles.length < 3) {
-        self.postMessage({ type: "error", message: "Not enough valid candles parsed from CSV. Need at least 3 rows." });
+        self.postMessage({ type: "error", message: "Not enough valid candles parsed from CSV. Need at least 3 rows. Got: " + candles.length });
         return;
       }
 
