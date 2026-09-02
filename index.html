@@ -1,1 +1,325 @@
-PLACEHOLDER_INDEX
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NIFTY Strategy Optimizer</title>
+<style>
+:root{--bg:#0d1117;--surface:#161b22;--surface2:#21262d;--border:#30363d;--text:#e6edf3;--text-dim:#8b949e;--accent:#58a6ff;--green:#3fb950;--red:#f85149;--yellow:#d29922;--radius:8px}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;min-height:100vh}
+header{background:var(--surface);border-bottom:1px solid var(--border);padding:1rem 2rem}
+header h1{font-size:1.4rem;font-weight:700}
+header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
+.container{max-width:1100px;margin:0 auto;padding:1.5rem}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1.25rem;margin-bottom:1.25rem}
+.card h2{font-size:.95rem;font-weight:600;margin-bottom:1rem;display:flex;align-items:center;gap:.5rem}
+.card h2::before{content:'';width:3px;height:16px;background:var(--accent);border-radius:2px}
+.muted{color:var(--text-dim);font-size:.82rem;margin-bottom:.75rem}
+.yahoo-row{display:flex;gap:.5rem;margin-bottom:.75rem;flex-wrap:wrap}
+.yahoo-row select{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:8px 10px;font-size:.85rem;flex:1;min-width:120px;cursor:pointer}
+.yahoo-row select:hover{border-color:var(--accent)}
+.run-section{text-align:center;margin-bottom:1rem}
+.run-btn{background:linear-gradient(135deg,var(--accent),#4f8ef7);color:#fff;border:none;border-radius:var(--radius);padding:.85rem 2.5rem;font-size:1rem;font-weight:700;cursor:pointer;transition:all .2s;box-shadow:0 2px 8px rgba(88,166,255,.3)}
+.run-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 4px 16px rgba(88,166,255,.5)}
+.run-btn:disabled{opacity:.35;cursor:not-allowed;box-shadow:none}
+#yahooBtn{background:var(--surface2);border:1px solid var(--accent);color:var(--accent);border-radius:4px;padding:8px 16px;font-size:.85rem;font-weight:600;cursor:pointer;transition:all .2s;white-space:nowrap}
+#yahooBtn:hover:not(:disabled){background:rgba(88,166,255,.12);box-shadow:0 0 12px rgba(88,166,255,.3)}
+#yahooBtn:disabled{opacity:.5;cursor:not-allowed}
+.yahoo-status{margin-top:.5rem;padding:.6rem .75rem;border-radius:4px;font-size:.8rem;line-height:1.4;display:none}
+.yahoo-status.loading{background:rgba(88,166,255,.1);color:var(--accent)}
+.yahoo-status.success{background:rgba(63,185,80,.1);color:var(--green)}
+.yahoo-status.error{background:rgba(248,81,73,.1);color:var(--red)}
+.param-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:.75rem}
+.param-item{background:var(--surface2);border-radius:6px;padding:.6rem .75rem}
+.param-item label{display:block;font-size:.8rem;color:var(--text-dim);margin-bottom:.4rem}
+.range-row{display:flex;align-items:center;gap:.4rem}
+.range-row span{font-size:.75rem;color:var(--text-dim);min-width:28px}
+.range-row input[type="number"]{background:var(--bg);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:5px 8px;font-size:.85rem;width:55px;text-align:center}
+.range-row input[type="number"]:focus{outline:none;border-color:var(--accent)}
+.combo-count{font-size:.85rem;font-weight:600;padding:.5rem .75rem;background:var(--surface2);border-radius:4px;margin-top:.75rem}
+.filter-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:.5rem;margin-bottom:.75rem}
+.filter-grid label{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-dim);cursor:pointer}
+.filter-grid input[type="checkbox"]{accent-color:var(--accent);width:16px;height:16px}
+.filter-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
+.filter-row label{font-size:.8rem;color:var(--text-dim);white-space:nowrap}
+.filter-row select,.filter-row input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 10px;font-size:.82rem;cursor:pointer}
+.filter-row select:hover,.filter-row input:hover{border-color:var(--accent)}
+.progress-wrap{margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;display:none}
+.progress-bar{width:100%;height:10px;background:var(--surface2);border-radius:5px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--green));width:0%;transition:width .15s;border-radius:5px}
+.progress-text{font-size:.82rem;color:var(--text-dim);margin-top:.5rem;text-align:center}
+.tabs{display:flex;gap:.5rem;margin-bottom:1rem;border-bottom:1px solid var(--border)}
+.tab{padding:.6rem 1.2rem;font-size:.88rem;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:color .2s,border-color .2s}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:.6rem;margin-bottom:1rem}
+.stat-item{background:var(--surface2);border-radius:6px;padding:.7rem;text-align:center}
+.stat-item .stat-val{font-size:1.2rem;font-weight:700;color:var(--accent)}
+.stat-item .stat-label{font-size:.68rem;color:var(--text-dim);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.results-table{width:100%;border-collapse:collapse;font-size:.82rem}
+.results-table th{text-align:left;padding:.6rem .5rem;border-bottom:2px solid var(--border);color:var(--text-dim);font-weight:600;white-space:nowrap;cursor:pointer}
+.results-table th:hover{color:var(--accent)}
+.results-table td{padding:.5rem;border-bottom:1px solid var(--border);white-space:nowrap}
+.results-table tr{cursor:pointer;transition:background .1s}
+.results-table tr:hover td{background:rgba(88,166,255,.06)}
+.results-table tr.active td{background:rgba(88,166,255,.12)}
+.pos{color:var(--green);font-weight:600}
+.neg{color:var(--red);font-weight:600}
+.params-cell{font-family:'SF Mono',Monaco,monospace;font-size:.72rem;color:var(--text-dim)}
+#equityCanvas{width:100%;height:400px;background:var(--surface2);border-radius:var(--radius);border:1px solid var(--border)}
+.empty-state{text-align:center;padding:3rem 1rem;color:var(--text-dim)}
+.empty-state p:first-child{font-size:3rem;margin-bottom:.5rem}
+</style>
+</head>
+<body>
+<header>
+<h1> NIFTY Strategy Optimizer</h1>
+<p>Fetch live data from Yahoo Finance - Sweep parameter combinations - Get top 20 results</p>
+</header>
+<div class="container">
+
+<section class="card">
+<h2>1. Fetch Data</h2>
+<div class="yahoo-row">
+<select id="yahooSymbol"></select>
+<select id="yahooInterval"></select>
+<select id="yahooRange"></select>
+<button id="yahooBtn">Fetch from Yahoo</button>
+</div>
+<div id="yahooStatus" class="yahoo-status"></div>
+<p id="candleCount" class="muted">No data fetched yet.</p>
+</section>
+
+<section class="card">
+<h2>2. Parameter Sweep Ranges</h2>
+<p class="muted">Set min/max for each parameter. Every value in the range is tested. Narrow ranges for faster results.</p>
+<div class="param-grid">
+<div class="param-item"><label>Engulfing Min Body</label><div class="range-row"><input type="number" id="engulf_min_min" value="0" min="0" max="99"><span>to</span><input type="number" id="engulf_min_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Doji Body Max</label><div class="range-row"><input type="number" id="doji_body_max_min" value="0" min="0" max="99"><span>to</span><input type="number" id="doji_body_max_max" value="9" min="0" max="99"></div></div>
+<div class="param-item"><label>Activate At (TSL)</label><div class="range-row"><input type="number" id="activation_pts_min" value="0" min="0" max="99"><span>to</span><input type="number" id="activation_pts_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Lock Profit At</label><div class="range-row"><input type="number" id="lock_profit_min" value="0" min="0" max="99"><span>to</span><input type="number" id="lock_profit_max" value="99" min="0" max="99"></div></div>
+<div class="param-item"><label>Profit Step</label><div class="range-row"><input type="number" id="profit_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="profit_step_max" value="99" min="1" max="99"></div></div>
+<div class="param-item"><label>Trail Step</label><div class="range-row"><input type="number" id="trail_step_min" value="1" min="1" max="99"><span>to</span><input type="number" id="trail_step_max" value="99" min="1" max="99"></div></div>
+</div>
+<div id="comboCount" class="combo-count"></div>
+</section>
+
+<section class="card">
+<h2>3. Strategy Filters</h2>
+<div class="filter-grid">
+<label><input type="checkbox" id="no_trade_monday" checked> No new trades on Monday</label>
+<label><input type="checkbox" id="no_trade_monthly_exp"> No new trades on monthly expiry day</label>
+<label><input type="checkbox" id="exit_on_monthly" checked> Exit on monthly expiry day</label>
+<label><input type="checkbox" id="use_candle_exit" checked> Exit after X candles</label>
+</div>
+<div class="filter-row">
+<label>Expiry Day</label>
+<select id="expiry_dow_str"><option>Monday</option><option selected>Tuesday</option><option>Wednesday</option><option>Thursday</option><option>Friday</option></select>
+<label>Max Candles</label>
+<input type="number" id="max_candles" value="300" min="1" max="9999">
+<label>Exit Window</label>
+<input type="text" id="monthly_exit_time" value="1510-1520">
+</div>
+<div class="filter-row">
+<label>Sort By</label>
+<select id="sortMetric"><option value="netProfit">Net Profit</option><option value="sharpe">Sharpe Ratio</option><option value="winRate">Win Rate</option><option value="profitFactor">Profit Factor</option></select>
+</div>
+</section>
+
+<div class="run-section">
+<button id="runBtn" class="run-btn" disabled>Run Optimization</button>
+</div>
+
+<div id="progressWrap" class="progress-wrap">
+<div class="progress-bar"><div id="progressFill" class="progress-fill"></div></div>
+<p id="progressText" class="progress-text">Initializing...</p>
+</div>
+
+<section id="resultsCard" class="card" style="display:none;">
+<div class="tabs">
+<div class="tab active" data-tab="table">Top 20 Results</div>
+<div class="tab" data-tab="chart">Equity Curve</div>
+</div>
+<div id="tab-table">
+<div id="statsGrid" class="stats-grid"></div>
+<table class="results-table">
+<thead><tr><th>#</th><th data-sort="netProfit">Net Profit</th><th data-sort="totalTrades">Trades</th><th data-sort="winRate">Win %</th><th data-sort="profitFactor">PF</th><th data-sort="sharpe">Sharpe</th><th data-sort="maxDrawdown">Max DD</th><th data-sort="avgTrade">Avg/Trade</th><th>Parameters</th></tr></thead>
+<tbody id="resultsBody"></tbody>
+</table>
+</div>
+<div id="tab-chart" style="display:none;">
+<p class="muted">Equity curve for the selected parameter set. Click a row in the table to view.</p>
+<canvas id="equityCanvas"></canvas>
+</div>
+</section>
+
+<section id="emptyCard" class="card">
+<div class="empty-state"><p></p><p>Fetch data from Yahoo Finance and run the optimization to see results here.</p></div>
+</section>
+
+</div>
+
+<script>
+// ===== YAHOO FINANCE (inlined from yahoo.js) =====
+var YahooFinance = (function() {
+  var SYMBOLS = { "NIFTY 50": "^NSEI", "SENSEX": "^BSESN" };
+  var INTERVALS = { "1 min":"1m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
+  var RANGES = ["1mo","3mo","6mo","1y","2y","5y","10y","max"];
+  var CORS_PROXIES = [
+    function(u){return "https://corsproxy.io/?url="+encodeURIComponent(u)},
+    function(u){return "https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
+    function(u){return "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)}
+  ];
+
+  async function fetchCandles(symbol, interval, range, onProgress) {
+    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?interval="+interval+"&range="+range;
+    var data = null, lastError = null;
+
+    if (onProgress) onProgress("Fetching from Yahoo Finance...");
+    try {
+      var fnUrl = "/api/yahoo?symbol="+encodeURIComponent(symbol)+"&interval="+interval+"&range="+range;
+      var resp = await fetch(fnUrl);
+      if (resp.ok) data = await resp.json();
+    } catch(e) { lastError = e; }
+
+    if (!data) {
+      for (var i=0; i<CORS_PROXIES.length; i++) {
+        if (onProgress) onProgress("Trying proxy "+(i+1)+"/"+CORS_PROXIES.length+"...");
+        try {
+          var resp2 = await fetch(CORS_PROXIES[i](yahooUrl));
+          if (resp2.ok) { data = JSON.parse(await resp2.text()); if (data&&data.chart&&data.chart.result) break; data=null; }
+        } catch(e) { lastError=e; }
+      }
+    }
+
+    if (!data||!data.chart||!data.chart.result) throw new Error("Could not fetch from Yahoo Finance. "+(lastError?"("+lastError.message+")":""));
+
+    var result = data.chart.result[0];
+    var ts = result.timestamp||[];
+    var q = result.indicators.quote[0];
+    var candles = [];
+    for (var i=0; i<ts.length; i++) {
+      if (q.open[i]==null||q.high[i]==null||q.low[i]==null||q.close[i]==null) continue;
+      candles.push({time:ts[i]*1000,open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i],volume:q.volume?q.volume[i]||0:0});
+    }
+    var csvText = "Date,Open,High,Low,Close,Volume\n";
+    for (var c of candles) {
+      var d = new Date(c.time);
+      csvText += d.toISOString().slice(0,10)+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
+    }
+    return {candles:candles, csvText:csvText, meta:result.meta||{}};
+  }
+
+  return { fetchCandles:fetchCandles, SYMBOLS:SYMBOLS, INTERVALS:INTERVALS, RANGES:RANGES };
+})();
+</script>
+
+<script>
+// ===== APP (inlined from app.js) =====
+(function() {
+  "use strict";
+  var csvText = null, worker = null, topResults = [], currentSort = "netProfit", sortDesc = true;
+  function $(id) { return document.getElementById(id); }
+
+  var yahooSymbol = $("yahooSymbol"), yahooInterval = $("yahooInterval"), yahooRange = $("yahooRange");
+  var yahooBtn = $("yahooBtn"), yahooStatus = $("yahooStatus"), candleCount = $("candleCount"), runBtn = $("runBtn");
+
+  if (yahooSymbol && yahooInterval && yahooRange) {
+    Object.entries(YahooFinance.SYMBOLS).forEach(function(e) {
+      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooSymbol.appendChild(o);
+    });
+    Object.entries(YahooFinance.INTERVALS).forEach(function(e) {
+      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooInterval.appendChild(o);
+    });
+    YahooFinance.RANGES.forEach(function(r) {
+      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10 years)":r;
+      if (r==="1y") o.selected=true; yahooRange.appendChild(o);
+    });
+  }
+
+  if (yahooBtn) yahooBtn.addEventListener("click", async function() {
+    var symbol = yahooSymbol?yahooSymbol.value:"^NSEI", interval = yahooInterval?yahooInterval.value:"1d", range = yahooRange?yahooRange.value:"1y";
+    yahooBtn.disabled = true; yahooBtn.textContent = "Fetching...";
+    if (yahooStatus) { yahooStatus.style.display="block"; yahooStatus.className="yahoo-status loading"; yahooStatus.textContent="Connecting to Yahoo Finance..."; }
+    try {
+      var result = await YahooFinance.fetchCandles(symbol, interval, range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
+      csvText = result.csvText;
+      if (runBtn) runBtn.disabled = false;
+      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"; }
+      if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization.";
+    } catch(err) {
+      if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="[X] "+err.message; }
+    } finally {
+      yahooBtn.disabled = false; yahooBtn.textContent = "Fetch from Yahoo";
+    }
+  });
+
+  function getRanges() {
+    function rng(n) { var a=$(n+"_min"),b=$(n+"_max"); return [parseInt(a?a.value:"0"),parseInt(b?b.value:"99")]; }
+    return { ranges:{engulf_min:rng("engulf_min"),doji_body_max:rng("doji_body_max"),activation_pts:rng("activation_pts"),lock_profit:rng("lock_profit"),profit_step:rng("profit_step"),trail_step:rng("trail_step")} };
+  }
+  function getFixedParams() {
+    return { no_trade_monday:$("no_trade_monday")?$("no_trade_monday").checked:true, no_trade_monthly_exp:$("no_trade_monthly_exp")?$("no_trade_monthly_exp").checked:false,
+      exit_on_monthly:$("exit_on_monthly")?$("exit_on_monthly").checked:true, use_candle_exit:$("use_candle_exit")?$("use_candle_exit").checked:true,
+      expiry_dow_str:$("expiry_dow_str")?$("expiry_dow_str").value:"Tuesday", max_candles:parseInt($("max_candles")?$("max_candles").value:"300")||300,
+      monthly_exit_time:$("monthly_exit_time")?$("monthly_exit_time").value:"1510-1520" };
+  }
+  function getComboCount() { var r=getRanges(),keys=Object.keys(r.ranges),t=1; for(var k of keys){var mn=r.ranges[k][0],mx=r.ranges[k][1];t*=Math.max(0,mx-mn+1);} return t; }
+  function updateComboCount() {
+    var t=getComboCount(),el=$("comboCount"); if(!el) return;
+    if(t>100000){el.style.color="#58a6ff";el.textContent=t.toLocaleString("en-IN")+" total combinations - will sample 1,00,000 randomly (fast).";}
+    else{el.style.color="#27ae60";el.textContent=t.toLocaleString("en-IN")+" combinations - full sweep (fast).";}
+  }
+  ["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].forEach(function(n){["_min","_max"].forEach(function(s){var e=$(n+s);if(e)e.addEventListener("input",updateComboCount);});});
+  updateComboCount();
+
+  if (runBtn) runBtn.addEventListener("click", function() {
+    if(!csvText) return;
+    runBtn.disabled=true; var pw=$("progressWrap");if(pw)pw.style.display="block"; var pf=$("progressFill");if(pf)pf.style.width="0%"; var pt=$("progressText");if(pt)pt.textContent="Initializing...";
+    var r=getRanges(),fp=getFixedParams(),sm=$("sortMetric")?$("sortMetric").value:"netProfit";
+    var steps={}; Object.keys(r.ranges).forEach(function(k){steps[k]=1;});
+    if(worker) worker.terminate();
+    worker=new Worker("js/worker.js?v="+Date.now());
+    worker.onmessage=function(e){var m=e.data;var pt2=$("progressText"),pf2=$("progressFill"),pw2=$("progressWrap");
+      if(m.type==="parsed"){if(pt2)pt2.textContent=m.candleCount+" candles parsed. Sweeping...";}
+      else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf2)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
+      else if(m.type==="done"){topResults=m.result.top;if(pw2)pw2.style.display="none";runBtn.disabled=false;renderResults(m.result);}
+      else if(m.type=="error"){if(pt2)pt2.textContent="Error: "+m.message;runBtn.disabled=false;}
+      else if(m.type=="singleDone"){drawChart(m.result.equity);}
+    };
+    worker.onerror=function(e){if(pt)pt.textContent="Worker Error: "+(e.message||"unknown");runBtn.disabled=false;};
+    worker.postMessage({type:"optimize",csvText:csvText,ranges:r.ranges,fixedParams:fp,steps:steps,sortMetric:sm});
+  });
+
+  function fmt(n,dec){dec=dec||2;if(!isFinite(n))return"N/A";return Number(n).toLocaleString("en-IN",{minimumFractionDigits:dec,maximumFractionDigits:dec});}
+  function renderResults(result) {
+    var ec=$("emptyCard"),rc=$("resultsCard");if(ec)ec.style.display="none";if(rc)rc.style.display="block";
+    var best=result.top[0]||{metrics:{}},sg=$("statsGrid");
+    if(sg){var stats=[{val:result.totalTested.toLocaleString("en-IN"),label:"Combos Tested"},{val:result.top.length,label:"Top Results"},{val:fmt(best.metrics.netProfit,0),label:"Best Net Profit"},{val:fmt(best.metrics.winRate,1)+"%",label:"Best Win Rate"},{val:fmt(best.metrics.sharpe,2),label:"Best Sharpe"}];
+      sg.innerHTML=stats.map(function(s){return'<div class="stat-item"><div class="stat-val">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>';}).join("");}
+    renderTable(); renderChart(0);
+  }
+  function renderTable() {
+    var tb=$("resultsBody"); if(!tb) return;
+    tb.innerHTML=topResults.map(function(r,i){var m=r.metrics,pc=m.netProfit>=0?"pos":"neg";
+      var ps=Object.entries(r.params).filter(function(k){return["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].indexOf(k[0])>=0;}).map(function(k){return k[0].split("_")[0]+"="+k[1];}).join(", ");
+      return'<tr data-idx="'+i+'"><td>'+(i+1)+'</td><td class="'+pc+'">'+fmt(m.netProfit,0)+'</td><td>'+m.totalTrades+'</td><td>'+fmt(m.winRate,1)+'%</td><td>'+fmt(m.profitFactor,2)+'</td><td>'+fmt(m.sharpe,2)+'</td><td>'+fmt(m.maxDrawdown,0)+'</td><td>'+fmt(m.avgTrade,1)+'</td><td class="params-cell">'+ps+'</td></tr>';
+    }).join("");
+    tb.querySelectorAll("tr").forEach(function(tr){tr.addEventListener("click",function(){tb.querySelectorAll("tr").forEach(function(r){r.classList.remove("active");});tr.classList.add("active");renderChart(parseInt(tr.dataset.idx));var ct=document.querySelector('.tab[data-tab="chart"]');if(ct)ct.click();});});
+  }
+  function renderChart(idx){var r=topResults[idx];if(!r)return;if(worker)worker.postMessage({type:"single",csvText:csvText,params:r.params});}
+  function drawChart(equity){
+    var canvas=$("equityCanvas");if(!canvas)return;var ctx=canvas.getContext("2d");var W=canvas.width=canvas.offsetWidth,H=canvas.height=canvas.offsetHeight;ctx.clearRect(0,0,W,H);
+    if(!equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
+    var vals=equity.map(function(e){return e.equity;}),minV=Math.min.apply(null,vals.concat([0])),maxV=Math.max.apply(null,vals.concat([1])),range=maxV-minV||1,pad=40;
+    ctx.strokeStyle="#666";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.lineTo(W-pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.stroke();
+    ctx.strokeStyle="#4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,equity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+    ctx.lineTo(pad+(W-2*pad),H-pad);ctx.lineTo(pad,H-pad);ctx.closePath();ctx.fillStyle="rgba(79,195,247,0.15)";ctx.fill();
+  }
+  document.querySelectorAll(".tab").forEach(function(tab){tab.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});tab.classList.add("active");var tt=$("tab-table"),tc=$("tab-chart");if(tt)tt.style.display=tab.dataset.tab==="table"?"block":"none";if(tc)tc.style.display=tab.dataset.tab==="chart"?"block":"none";if(tab.dataset.tab==="chart"){var ar=document.querySelector("#resultsBody tr.active")||document.querySelector("#resultsBody tr");if(ar)renderChart(parseInt(ar.dataset.idx));}});});
+  document.querySelectorAll("th[data-sort]").forEach(function(th){th.addEventListener("click",function(){var m=th.dataset.sort;if(currentSort===m)sortDesc=!sortDesc;else{currentSort=m;sortDesc=true;}topResults.sort(function(a,b){var av=a.metrics[m],bv=b.metrics[m];if(isFinite(av)&&isFinite(bv))return sortDesc?bv-av:av-bv;return 0;});renderTable();});});
+})();
+</script>
+</body>
+</html>
