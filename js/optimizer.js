@@ -12,7 +12,6 @@
   "use strict";
 
   var TOP_N = 20;
-  var MAX_COMBOS = 5000000; // 50 lakh safety limit
 
   /**
    * Count total combinations without building the array.
@@ -136,13 +135,6 @@
       return { top: [], totalTested: 0, totalCombinations: 0 };
     }
 
-    if (total > MAX_COMBOS) {
-      throw new Error(
-        "Too many combinations (" + total.toLocaleString("en-IN") + "). " +
-        "Maximum is " + MAX_COMBOS.toLocaleString("en-IN") + ". " +
-        "Increase step sizes or narrow ranges."
-      );
-    }
 
     // Build value lists for each parameter
     var info = buildValueLists(ranges, steps);
