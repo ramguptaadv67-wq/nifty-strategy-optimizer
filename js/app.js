@@ -1,363 +1,397 @@
-let csvText = null;
-let worker = null;
-let topResults = [];
-let currentSort = "netProfit";
-let sortDesc = true;
+(function() {
+  "use strict";
 
-// ---- Yahoo Finance fetch ----
-const yahooSymbol = document.getElementById("yahooSymbol");
-const yahooInterval = document.getElementById("yahooInterval");
-const yahooRange = document.getElementById("yahooRange");
-const yahooBtn = document.getElementById("yahooBtn");
-const yahooStatus = document.getElementById("yahooStatus");
-const candleCount = document.getElementById("candleCount");
-const runBtn = document.getElementById("runBtn");
+  var csvText = null;
+  var worker = null;
+  var topResults = [];
+  var currentSort = "netProfit";
+  var sortDesc = true;
 
-// Populate dropdowns
-if (typeof YahooFinance !== "undefined") {
-  Object.entries(YahooFinance.SYMBOLS).forEach(([name, ticker]) => {
-    const opt = document.createElement("option");
-    opt.value = ticker; opt.textContent = name;
-    yahooSymbol.appendChild(opt);
-  });
-  Object.entries(YahooFinance.INTERVALS).forEach(([name, val]) => {
-    const opt = document.createElement("option");
-    opt.value = val; opt.textContent = name;
-    yahooInterval.appendChild(opt);
-  });
-  YahooFinance.RANGES.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r;
-    const label = r === "max" ? "Max (10+ years)" : r;
-    opt.textContent = label;
-    if (r === "1y") opt.selected = true;
-    yahooRange.appendChild(opt);
-  });
-}
-
-yahooBtn.addEventListener("click", async () => {
-  const symbol = yahooSymbol.value;
-  const interval = yahooInterval.value;
-  const range = yahooRange.value;
-
-  yahooBtn.disabled = true;
-  yahooBtn.textContent = "Fetching...";
-  yahooStatus.style.display = "block";
-  yahooStatus.className = "yahoo-status loading";
-  yahooStatus.textContent = "Connecting to Yahoo Finance...";
-
-  try {
-    const { candles, csvText: csv, meta } = await YahooFinance.fetchCandles(
-      symbol, interval, range,
-      (msg) => { yahooStatus.textContent = msg; }
-    );
-
-    csvText = csv;
-    runBtn.disabled = false;
-    yahooStatus.className = "yahoo-status success";
-    yahooStatus.textContent = `✓ Fetched ${candles.length} candles from ${meta.exchangeName || symbol} (${new Date(candles[0].time).toLocaleDateString()} → ${new Date(candles[candles.length-1].time).toLocaleDateString()})`;
-    candleCount.textContent = candles.length + " candles ready for optimization.";
-  } catch (err) {
-    yahooStatus.className = "yahoo-status error";
-    yahooStatus.textContent = "✗ " + err.message;
-  } finally {
-    yahooBtn.disabled = false;
-    yahooBtn.textContent = "Fetch from Yahoo";
+  function $(id) {
+    return document.getElementById(id);
   }
-});
 
-// ---- Collect ranges ----
-function getRanges() {
-  function rng(name) {
-    return [parseInt(document.getElementById(name + "_min").value), parseInt(document.getElementById(name + "_max").value)];
+  // ---- Yahoo Finance fetch ----
+  var yahooSymbol = $("yahooSymbol");
+  var yahooInterval = $("yahooInterval");
+  var yahooRange = $("yahooRange");
+  var yahooBtn = $("yahooBtn");
+  var yahooStatus = $("yahooStatus");
+  var candleCount = $("candleCount");
+  var runBtn = $("runBtn");
+
+  // Populate dropdowns
+  if (typeof YahooFinance !== "undefined" && yahooSymbol && yahooInterval && yahooRange) {
+    Object.entries(YahooFinance.SYMBOLS).forEach(function(entry) {
+      var opt = document.createElement("option");
+      opt.value = entry[1];
+      opt.textContent = entry[0];
+      yahooSymbol.appendChild(opt);
+    });
+    Object.entries(YahooFinance.INTERVALS).forEach(function(entry) {
+      var opt = document.createElement("option");
+      opt.value = entry[1];
+      opt.textContent = entry[0];
+      yahooInterval.appendChild(opt);
+    });
+    YahooFinance.RANGES.forEach(function(r) {
+      var opt = document.createElement("option");
+      opt.value = r;
+      opt.textContent = r === "max" ? "Max (10+ years)" : r;
+      if (r === "1y") opt.selected = true;
+      yahooRange.appendChild(opt);
+    });
   }
-  function stp(name) {
-    return parseInt(document.getElementById(name + "_step").value) || 1;
+
+  if (yahooBtn) {
+    yahooBtn.addEventListener("click", async function() {
+      var symbol = yahooSymbol ? yahooSymbol.value : "^NSEI";
+      var interval = yahooInterval ? yahooInterval.value : "1d";
+      var range = yahooRange ? yahooRange.value : "1y";
+
+      yahooBtn.disabled = true;
+      yahooBtn.textContent = "Fetching...";
+      if (yahooStatus) {
+        yahooStatus.style.display = "block";
+        yahooStatus.className = "yahoo-status loading";
+        yahooStatus.textContent = "Connecting to Yahoo Finance...";
+      }
+
+      try {
+        var result = await YahooFinance.fetchCandles(symbol, interval, range, function(msg) {
+          if (yahooStatus) yahooStatus.textContent = msg;
+        });
+
+        csvText = result.csvText;
+        if (runBtn) runBtn.disabled = false;
+        if (yahooStatus) {
+          yahooStatus.className = "yahoo-status success";
+          yahooStatus.textContent = "\u2713 Fetched " + result.candles.length + " candles from " + (result.meta.exchangeName || symbol) + " (" + new Date(result.candles[0].time).toLocaleDateString() + " \u2192 " + new Date(result.candles[result.candles.length - 1].time).toLocaleDateString() + ")";
+        }
+        if (candleCount) candleCount.textContent = result.candles.length + " candles ready for optimization.";
+      } catch (err) {
+        if (yahooStatus) {
+          yahooStatus.className = "yahoo-status error";
+          yahooStatus.textContent = "\u2717 " + err.message;
+        }
+      } finally {
+        yahooBtn.disabled = false;
+        yahooBtn.textContent = "Fetch from Yahoo";
+      }
+    });
   }
-  return {
-    ranges: {
-      engulf_min: rng("engulf_min"),
-      doji_body_max: rng("doji_body_max"),
-      activation_pts: rng("activation_pts"),
-      lock_profit: rng("lock_profit"),
-      profit_step: rng("profit_step"),
-      trail_step: rng("trail_step"),
-    },
-    steps: {
-      engulf_min: stp("engulf_min"),
-      doji_body_max: stp("doji_body_max"),
-      activation_pts: stp("activation_pts"),
-      lock_profit: stp("lock_profit"),
-      profit_step: stp("profit_step"),
-      trail_step: stp("trail_step"),
+
+  // ---- Collect ranges ----
+  function getRanges() {
+    function rng(name) {
+      var minEl = $(name + "_min");
+      var maxEl = $(name + "_max");
+      return [parseInt(minEl ? minEl.value : "0"), parseInt(maxEl ? maxEl.value : "99")];
     }
-  };
-}
-
-function getFixedParams() {
-  return {
-    no_trade_monday: document.getElementById("no_trade_monday").checked,
-    no_trade_monthly_exp: document.getElementById("no_trade_monthly_exp").checked,
-    exit_on_monthly: document.getElementById("exit_on_monthly").checked,
-    use_candle_exit: document.getElementById("use_candle_exit").checked,
-    expiry_dow_str: document.getElementById("expiry_dow_str").value,
-    max_candles: parseInt(document.getElementById("max_candles").value) || 300,
-    monthly_exit_time: document.getElementById("monthly_exit_time").value,
-  };
-}
-
-// ---- Combination counter ----
-function getComboCount() {
-  const { ranges, steps } = getRanges();
-  const keys = Object.keys(ranges);
-  let total = 1;
-  for (const key of keys) {
-    const [min, max] = ranges[key];
-    const step = steps[key] || 1;
-    const count = Math.floor((max - min) / step) + 1;
-    total *= Math.max(0, count);
-  }
-  return total;
-}
-
-function updateComboCount() {
-  const total = getComboCount();
-  const comboEl = document.getElementById("comboCount");
-  if (!comboEl) return;
-  if (total > 2000000) {
-    comboEl.style.color = "#e74c3c";
-    comboEl.textContent = total.toLocaleString("en-IN") + " combinations — TOO MANY! Max 20 lakh. Increase step sizes.";
-  } else if (total > 100000) {
-    comboEl.style.color = "#f39c12";
-    comboEl.textContent = total.toLocaleString("en-IN") + " combinations — may take a while.";
-  } else {
-    comboEl.style.color = "#27ae60";
-    comboEl.textContent = total.toLocaleString("en-IN") + " combinations — ready to run.";
-  }
-}
-
-["engulf_min", "doji_body_max", "activation_pts", "lock_profit", "profit_step", "trail_step"].forEach(function(name) {
-  ["_min", "_max", "_step"].forEach(function(suffix) {
-    var el = document.getElementById(name + suffix);
-    if (el) el.addEventListener("input", updateComboCount);
-  });
-});
-updateComboCount();
-
-// ---- Run optimization ----
-runBtn.addEventListener("click", () => {
-  if (!csvText) return;
-
-  // Pre-check combination count
-  const comboCount = getComboCount();
-  if (comboCount > 2000000) {
-    document.getElementById("progressWrap").style.display = "block";
-    document.getElementById("progressFill").style.width = "0%";
-    document.getElementById("progressText").textContent = "Error: " + comboCount.toLocaleString("en-IN") + " combinations is too many. Max 20 lakh. Increase step sizes or narrow ranges.";
-    return;
+    function stp(name) {
+      var el = $(name + "_step");
+      return parseInt(el ? el.value : "1") || 1;
+    }
+    return {
+      ranges: {
+        engulf_min: rng("engulf_min"),
+        doji_body_max: rng("doji_body_max"),
+        activation_pts: rng("activation_pts"),
+        lock_profit: rng("lock_profit"),
+        profit_step: rng("profit_step"),
+        trail_step: rng("trail_step")
+      },
+      steps: {
+        engulf_min: stp("engulf_min"),
+        doji_body_max: stp("doji_body_max"),
+        activation_pts: stp("activation_pts"),
+        lock_profit: stp("lock_profit"),
+        profit_step: stp("profit_step"),
+        trail_step: stp("trail_step")
+      }
+    };
   }
 
-  runBtn.disabled = true;
-  document.getElementById("progressWrap").style.display = "block";
-  document.getElementById("progressFill").style.width = "0%";
-  document.getElementById("progressText").textContent = "Initializing...";
-
-  const { ranges, steps } = getRanges();
-  const fixedParams = getFixedParams();
-  const sortMetric = document.getElementById("sortMetric").value;
-
-  if (worker) worker.terminate();
-  worker = new Worker("js/worker.js?v=" + Date.now());
-  worker.onmessage = handleWorkerMessage;
-  worker.onerror = function(e) {
-    document.getElementById("progressText").textContent = "Worker Error: " + (e.message || e.filename + ":" + e.lineno);
-    runBtn.disabled = false;
-  };
-  worker.postMessage({ type: "optimize", csvText, ranges, fixedParams, steps, sortMetric });
-});
-
-function handleWorkerMessage(e) {
-  const msg = e.data;
-  if (msg.type === "parsed") {
-    document.getElementById("progressText").textContent = msg.candleCount + " candles parsed. Sweeping parameters...";
-  } else if (msg.type === "progress") {
-    const pct = (msg.done / msg.total) * 100;
-    document.getElementById("progressFill").style.width = pct + "%";
-    document.getElementById("progressText").textContent = msg.done + " / " + msg.total + " combinations (" + pct.toFixed(1) + "%)";
-  } else if (msg.type === "done") {
-    topResults = msg.result.top;
-    document.getElementById("progressWrap").style.display = "none";
-    runBtn.disabled = false;
-    renderResults(msg.result);
-  } else if (msg.type === "error") {
-    document.getElementById("progressText").textContent = "Error: " + msg.message;
-    runBtn.disabled = false;
+  function getFixedParams() {
+    return {
+      no_trade_monday: $("no_trade_monday") ? $("no_trade_monday").checked : true,
+      no_trade_monthly_exp: $("no_trade_monthly_exp") ? $("no_trade_monthly_exp").checked : false,
+      exit_on_monthly: $("exit_on_monthly") ? $("exit_on_monthly").checked : true,
+      use_candle_exit: $("use_candle_exit") ? $("use_candle_exit").checked : true,
+      expiry_dow_str: $("expiry_dow_str") ? $("expiry_dow_str").value : "Tuesday",
+      max_candles: parseInt($("max_candles") ? $("max_candles").value : "300") || 300,
+      monthly_exit_time: $("monthly_exit_time") ? $("monthly_exit_time").value : "1510-1520"
+    };
   }
-}
 
-// ---- Render results ----
-function fmt(n, dec = 2) {
-  if (!isFinite(n)) return "∞";
-  return Number(n).toLocaleString("en-IN", { minimumFractionDigits: dec, maximumFractionDigits: dec });
-}
+  // ---- Combination counter ----
+  function getComboCount() {
+    var r = getRanges();
+    var keys = Object.keys(r.ranges);
+    var total = 1;
+    for (var i = 0; i < keys.length; i++) {
+      var min = r.ranges[keys[i]][0];
+      var max = r.ranges[keys[i]][1];
+      var step = r.steps[keys[i]] || 1;
+      var count = Math.floor((max - min) / step) + 1;
+      total *= Math.max(0, count);
+    }
+    return total;
+  }
 
-function renderResults(result) {
-  document.getElementById("emptyCard").style.display = "none";
-  document.getElementById("resultsCard").style.display = "block";
+  function updateComboCount() {
+    var total = getComboCount();
+    var comboEl = $("comboCount");
+    if (!comboEl) return;
+    if (total > 5000000) {
+      comboEl.style.color = "#e74c3c";
+      comboEl.textContent = total.toLocaleString("en-IN") + " combinations \u2014 TOO MANY! Max 50 lakh. Increase step sizes.";
+    } else if (total > 100000) {
+      comboEl.style.color = "#f39c12";
+      comboEl.textContent = total.toLocaleString("en-IN") + " combinations \u2014 may take a while.";
+    } else {
+      comboEl.style.color = "#27ae60";
+      comboEl.textContent = total.toLocaleString("en-IN") + " combinations \u2014 ready to run.";
+    }
+  }
 
-  const best = result.top[0] || { metrics: {} };
-  const statsGrid = document.getElementById("statsGrid");
-  const stats = [
-    { val: result.totalTested.toLocaleString("en-IN"), label: "Combos Tested" },
-    { val: result.top.length, label: "Top Results" },
-    { val: fmt(best.metrics.netProfit, 0), label: "Best Net Profit" },
-    { val: fmt(best.metrics.winRate, 1) + "%", label: "Best Win Rate" },
-    { val: fmt(best.metrics.sharpe, 2), label: "Best Sharpe" },
-  ];
-  statsGrid.innerHTML = stats.map(s => `<div class="stat-item"><div class="stat-val">${s.val}</div><div class="stat-label">${s.label}</div></div>`).join("");
-
-  renderTable();
-  renderChart(0);
-}
-
-function renderTable() {
-  const tbody = document.getElementById("resultsBody");
-  tbody.innerHTML = topResults.map((r, i) => {
-    const m = r.metrics;
-    const profitClass = m.netProfit >= 0 ? "pos" : "neg";
-    const params = Object.entries(r.params)
-      .filter(([k]) => ["engulf_min", "doji_body_max", "activation_pts", "lock_profit", "profit_step", "trail_step"].includes(k))
-      .map(([k, v]) => `${k.split("_")[0]}=${v}`).join(", ");
-    return `<tr data-idx="${i}">
-      <td>${i + 1}</td>
-      <td class="${profitClass}">${fmt(m.netProfit, 0)}</td>
-      <td>${m.totalTrades}</td>
-      <td>${fmt(m.winRate, 1)}%</td>
-      <td>${fmt(m.profitFactor, 2)}</td>
-      <td>${fmt(m.sharpe, 2)}</td>
-      <td>${fmt(m.maxDrawdown, 0)}</td>
-      <td>${fmt(m.avgTrade, 1)}</td>
-      <td class="params-cell">${params}</td>
-    </tr>`;
-  }).join("");
-
-  tbody.querySelectorAll("tr").forEach(tr => {
-    tr.addEventListener("click", () => {
-      tbody.querySelectorAll("tr").forEach(r => r.classList.remove("active"));
-      tr.classList.add("active");
-      const idx = parseInt(tr.dataset.idx);
-      renderChart(idx);
-      document.querySelector('.tab[data-tab="chart"]').click();
+  // Attach listeners safely
+  ["engulf_min", "doji_body_max", "activation_pts", "lock_profit", "profit_step", "trail_step"].forEach(function(name) {
+    ["_min", "_max", "_step"].forEach(function(suffix) {
+      var el = $(name + suffix);
+      if (el) el.addEventListener("input", updateComboCount);
     });
   });
-}
+  updateComboCount();
 
-// ---- Chart (equity curve) ----
-function renderChart(resultIdx) {
-  const r = topResults[resultIdx];
-  if (!r) return;
-  // Re-run backtest for this param set to get equity curve
-  if (worker) {
-    worker.postMessage({ type: "single", csvText, params: r.params });
-  }
-}
+  // ---- Run optimization ----
+  if (runBtn) {
+    runBtn.addEventListener("click", function() {
+      if (!csvText) return;
 
-// Handle single backtest response for chart
-const origHandler = handleWorkerMessage;
-handleWorkerMessage = function(e) {
-  const msg = e.data;
-  if (msg.type === "singleDone") {
-    drawChart(msg.result.equity, msg.candleCount);
-  } else {
-    origHandler(e);
-  }
-};
+      var comboCount = getComboCount();
+      if (comboCount > 5000000) {
+        var pw = $("progressWrap");
+        if (pw) pw.style.display = "block";
+        var pf = $("progressFill");
+        if (pf) pf.style.width = "0%";
+        var pt = $("progressText");
+        if (pt) pt.textContent = "Error: " + comboCount.toLocaleString("en-IN") + " combinations is too many. Max 50 lakh. Increase step sizes or narrow ranges.";
+        return;
+      }
 
-function drawChart(equity, candleCount) {
-  const canvas = document.getElementById("equityCanvas");
-  if (!canvas) return;
-  const ctx = canvas.getContext("2d");
-  const W = canvas.width = canvas.offsetWidth;
-  const H = canvas.height = canvas.offsetHeight;
-  ctx.clearRect(0, 0, W, H);
+      runBtn.disabled = true;
+      var pw = $("progressWrap");
+      if (pw) pw.style.display = "block";
+      var pf = $("progressFill");
+      if (pf) pf.style.width = "0%";
+      var pt = $("progressText");
+      if (pt) pt.textContent = "Initializing...";
 
-  if (!equity || equity.length === 0) {
-    ctx.fillStyle = "#999";
-    ctx.font = "14px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("No trades for this parameter set", W / 2, H / 2);
-    return;
-  }
+      var r = getRanges();
+      var fixedParams = getFixedParams();
+      var sortMetric = $("sortMetric") ? $("sortMetric").value : "netProfit";
 
-  const vals = equity.map(e => e.equity);
-  const minV = Math.min(...vals, 0);
-  const maxV = Math.max(...vals, 1);
-  const range = maxV - minV || 1;
-  const pad = 40;
-
-  // Zero line
-  const zeroY = H - pad - ((0 - minV) / range) * (H - 2 * pad);
-  ctx.strokeStyle = "#666";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(pad, zeroY);
-  ctx.lineTo(W - pad, zeroY);
-  ctx.stroke();
-
-  // Equity line
-  ctx.strokeStyle = "#4fc3f7";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  equity.forEach((pt, i) => {
-    const x = pad + (i / Math.max(1, equity.length - 1)) * (W - 2 * pad);
-    const y = H - pad - ((pt.equity - minV) / range) * (H - 2 * pad);
-    if (i === 0) ctx.moveTo(x, y);
-    else ctx.lineTo(x, y);
-  });
-  ctx.stroke();
-
-  // Fill below
-  ctx.lineTo(pad + (W - 2 * pad), H - pad);
-  ctx.lineTo(pad, H - pad);
-  ctx.closePath();
-  ctx.fillStyle = "rgba(79, 195, 247, 0.15)";
-  ctx.fill();
-
-  // Labels
-  ctx.fillStyle = "#999";
-  ctx.font = "11px sans-serif";
-  ctx.textAlign = "left";
-  ctx.fillText("₹" + fmt(maxV, 0), pad, pad - 5);
-  ctx.fillText("₹" + fmt(minV, 0), pad, H - pad + 15);
-  ctx.textAlign = "right";
-  ctx.fillText(equity.length + " trades", W - pad, H - pad + 15);
-}
-
-// ---- Tabs ----
-document.querySelectorAll(".tab").forEach(tab => {
-  tab.addEventListener("click", () => {
-    document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
-    tab.classList.add("active");
-    document.getElementById("tab-table").style.display = tab.dataset.tab === "table" ? "block" : "none";
-    document.getElementById("tab-chart").style.display = tab.dataset.tab === "chart" ? "block" : "none";
-    if (tab.dataset.tab === "chart") {
-      const activeRow = document.querySelector("#resultsBody tr.active") || document.querySelector("#resultsBody tr");
-      if (activeRow) renderChart(parseInt(activeRow.dataset.idx));
-    }
-  });
-});
-
-// ---- Table sort ----
-document.querySelectorAll("th[data-sort]").forEach(th => {
-  th.addEventListener("click", () => {
-    const metric = th.dataset.sort;
-    if (currentSort === metric) sortDesc = !sortDesc;
-    else { currentSort = metric; sortDesc = true; }
-    topResults.sort((a, b) => {
-      const av = a.metrics[metric], bv = b.metrics[metric];
-      if (isFinite(av) && isFinite(bv)) return sortDesc ? bv - av : av - bv;
-      return 0;
+      if (worker) worker.terminate();
+      worker = new Worker("js/worker.js?v=" + Date.now());
+      worker.onmessage = handleWorkerMessage;
+      worker.onerror = function(e) {
+        if (pt) pt.textContent = "Worker Error: " + (e.message || e.filename + ":" + e.lineno);
+        runBtn.disabled = false;
+      };
+      worker.postMessage({ type: "optimize", csvText: csvText, ranges: r.ranges, fixedParams: fixedParams, steps: r.steps, sortMetric: sortMetric });
     });
+  }
+
+  function handleWorkerMessage(e) {
+    var msg = e.data;
+    var pt = $("progressText");
+    var pf = $("progressFill");
+    var pw = $("progressWrap");
+
+    if (msg.type === "parsed") {
+      if (pt) pt.textContent = msg.candleCount + " candles parsed. Sweeping parameters...";
+    } else if (msg.type === "progress") {
+      var pct = (msg.done / msg.total) * 100;
+      if (pf) pf.style.width = pct + "%";
+      if (pt) pt.textContent = msg.done + " / " + msg.total + " combinations (" + pct.toFixed(1) + "%)";
+    } else if (msg.type === "done") {
+      topResults = msg.result.top;
+      if (pw) pw.style.display = "none";
+      if (runBtn) runBtn.disabled = false;
+      renderResults(msg.result);
+    } else if (msg.type === "error") {
+      if (pt) pt.textContent = "Error: " + msg.message;
+      if (runBtn) runBtn.disabled = false;
+    } else if (msg.type === "singleDone") {
+      drawChart(msg.result.equity, msg.candleCount);
+    }
+  }
+
+  // ---- Render results ----
+  function fmt(n, dec) {
+    dec = dec || 2;
+    if (!isFinite(n)) return "\u221e";
+    return Number(n).toLocaleString("en-IN", { minimumFractionDigits: dec, maximumFractionDigits: dec });
+  }
+
+  function renderResults(result) {
+    var emptyCard = $("emptyCard");
+    var resultsCard = $("resultsCard");
+    if (emptyCard) emptyCard.style.display = "none";
+    if (resultsCard) resultsCard.style.display = "block";
+
+    var best = result.top[0] || { metrics: {} };
+    var statsGrid = $("statsGrid");
+    if (statsGrid) {
+      var stats = [
+        { val: result.totalTested.toLocaleString("en-IN"), label: "Combos Tested" },
+        { val: result.top.length, label: "Top Results" },
+        { val: fmt(best.metrics.netProfit, 0), label: "Best Net Profit" },
+        { val: fmt(best.metrics.winRate, 1) + "%", label: "Best Win Rate" },
+        { val: fmt(best.metrics.sharpe, 2), label: "Best Sharpe" }
+      ];
+      statsGrid.innerHTML = stats.map(function(s) {
+        return '<div class="stat-item"><div class="stat-val">' + s.val + '</div><div class="stat-label">' + s.label + '</div></div>';
+      }).join("");
+    }
+
     renderTable();
+    renderChart(0);
+  }
+
+  function renderTable() {
+    var tbody = $("resultsBody");
+    if (!tbody) return;
+
+    tbody.innerHTML = topResults.map(function(r, i) {
+      var m = r.metrics;
+      var profitClass = m.netProfit >= 0 ? "pos" : "neg";
+      var params = Object.entries(r.params)
+        .filter(function(k) { return ["engulf_min", "doji_body_max", "activation_pts", "lock_profit", "profit_step", "trail_step"].indexOf(k[0]) >= 0; })
+        .map(function(k) { return k[0].split("_")[0] + "=" + k[1]; })
+        .join(", ");
+      return '<tr data-idx="' + i + '">' +
+        '<td>' + (i + 1) + '</td>' +
+        '<td class="' + profitClass + '">' + fmt(m.netProfit, 0) + '</td>' +
+        '<td>' + m.totalTrades + '</td>' +
+        '<td>' + fmt(m.winRate, 1) + '%</td>' +
+        '<td>' + fmt(m.profitFactor, 2) + '</td>' +
+        '<td>' + fmt(m.sharpe, 2) + '</td>' +
+        '<td>' + fmt(m.maxDrawdown, 0) + '</td>' +
+        '<td>' + fmt(m.avgTrade, 1) + '</td>' +
+        '<td class="params-cell">' + params + '</td>' +
+        '</tr>';
+    }).join("");
+
+    var rows = tbody.querySelectorAll("tr");
+    for (var i = 0; i < rows.length; i++) {
+      (function(tr) {
+        tr.addEventListener("click", function() {
+          tbody.querySelectorAll("tr").forEach(function(r) { r.classList.remove("active"); });
+          tr.classList.add("active");
+          var idx = parseInt(tr.dataset.idx);
+          renderChart(idx);
+          var chartTab = document.querySelector('.tab[data-tab="chart"]');
+          if (chartTab) chartTab.click();
+        });
+      })(rows[i]);
+    }
+  }
+
+  // ---- Chart ----
+  function renderChart(resultIdx) {
+    var r = topResults[resultIdx];
+    if (!r) return;
+    if (worker) {
+      worker.postMessage({ type: "single", csvText: csvText, params: r.params });
+    }
+  }
+
+  function drawChart(equity, candleCount) {
+    var canvas = $("equityCanvas");
+    if (!canvas) return;
+    var ctx = canvas.getContext("2d");
+    var W = canvas.width = canvas.offsetWidth;
+    var H = canvas.height = canvas.offsetHeight;
+    ctx.clearRect(0, 0, W, H);
+
+    if (!equity || equity.length === 0) {
+      ctx.fillStyle = "#999";
+      ctx.font = "14px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText("No trades for this parameter set", W / 2, H / 2);
+      return;
+    }
+
+    var vals = equity.map(function(e) { return e.equity; });
+    var minV = Math.min.apply(null, vals.concat([0]));
+    var maxV = Math.max.apply(null, vals.concat([1]));
+    var range = maxV - minV || 1;
+    var pad = 40;
+
+    var zeroY = H - pad - ((0 - minV) / range) * (H - 2 * pad);
+    ctx.strokeStyle = "#666";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(pad, zeroY);
+    ctx.lineTo(W - pad, zeroY);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#4fc3f7";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    equity.forEach(function(pt, i) {
+      var x = pad + (i / Math.max(1, equity.length - 1)) * (W - 2 * pad);
+      var y = H - pad - ((pt.equity - minV) / range) * (H - 2 * pad);
+      if (i === 0) ctx.moveTo(x, y);
+      else ctx.lineTo(x, y);
+    });
+    ctx.stroke();
+
+    ctx.lineTo(pad + (W - 2 * pad), H - pad);
+    ctx.lineTo(pad, H - pad);
+    ctx.closePath();
+    ctx.fillStyle = "rgba(79, 195, 247, 0.15)";
+    ctx.fill();
+
+    ctx.fillStyle = "#999";
+    ctx.font = "11px sans-serif";
+    ctx.textAlign = "left";
+    ctx.fillText("\u20b9" + fmt(maxV, 0), pad, pad - 5);
+    ctx.fillText("\u20b9" + fmt(minV, 0), pad, H - pad + 15);
+    ctx.textAlign = "right";
+    ctx.fillText(equity.length + " trades", W - pad, H - pad + 15);
+  }
+
+  // ---- Tabs ----
+  document.querySelectorAll(".tab").forEach(function(tab) {
+    tab.addEventListener("click", function() {
+      document.querySelectorAll(".tab").forEach(function(t) { t.classList.remove("active"); });
+      tab.classList.add("active");
+      var tabTable = $("tab-table");
+      var tabChart = $("tab-chart");
+      if (tabTable) tabTable.style.display = tab.dataset.tab === "table" ? "block" : "none";
+      if (tabChart) tabChart.style.display = tab.dataset.tab === "chart" ? "block" : "none";
+      if (tab.dataset.tab === "chart") {
+        var activeRow = document.querySelector("#resultsBody tr.active") || document.querySelector("#resultsBody tr");
+        if (activeRow) renderChart(parseInt(activeRow.dataset.idx));
+      }
+    });
   });
-});
+
+  // ---- Table sort ----
+  document.querySelectorAll("th[data-sort]").forEach(function(th) {
+    th.addEventListener("click", function() {
+      var metric = th.dataset.sort;
+      if (currentSort === metric) sortDesc = !sortDesc;
+      else { currentSort = metric; sortDesc = true; }
+      topResults.sort(function(a, b) {
+        var av = a.metrics[metric], bv = b.metrics[metric];
+        if (isFinite(av) && isFinite(bv)) return sortDesc ? bv - av : av - bv;
+        return 0;
+      });
+      renderTable();
+    });
+  });
+})();
