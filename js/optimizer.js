@@ -11,7 +11,7 @@
   "use strict";
 
   var TOP_N = 20;
-  var SAMPLE_LIMIT = 100000; // 1 lakh - max random samples when combos exceed this
+  var SAMPLE_LIMIT = 100000;
 
   function countCombinations(ranges, steps) {
     var keys = Object.keys(ranges);
@@ -47,7 +47,6 @@
     return { keys: keys, valueLists: valueLists };
   }
 
-  // Seeded PRNG (mulberry32) - same seed = same results every time
   function makeRng(seed) {
     var s = seed | 0;
     return function() {
@@ -147,7 +146,6 @@
     if (onProgress) onProgress(0, targetCount);
 
     if (useSampling) {
-      // RANDOM SAMPLING with seeded PRNG (reproducible)
       var rng = makeRng(42);
       var seen = {};
       var attempts = 0;
@@ -194,7 +192,6 @@
         }
       }
     } else {
-      // FULL SWEEP: test every combination
       var progressInterval = Math.min(50000, Math.max(1, Math.floor(total / 200)));
       var indices = new Array(numParams).fill(0);
 
@@ -214,7 +211,6 @@
         }
 
         if (fullParams.profit_step <= 0 || fullParams.trail_step <= 0) {
-          // skip
         } else {
           var result = global.runBacktest(candles, fullParams);
           tested++;
