@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>NIFTY Strategy Optimizer â€” Parameter Sweep & Backtester</title>
-  <link rel="stylesheet" href="css/styles.css?v=2">
+  <link rel="stylesheet" href="css/styles.css?v=3">
 </head>
 <body>
   <div class="container">
@@ -29,7 +29,7 @@
     <!-- 2. Parameter Sweep Ranges -->
     <section class="card">
       <h2>2. Parameter Sweep Ranges</h2>
-      <p class="muted">Set min/max for each parameter. Default range 0â€“99 with step 5. <strong>Keep total combinations under 20 lakh.</strong></p>
+      <p class="muted">Set min/max for each parameter. Default range 0â€“99 with step 10. <strong>Max 50 lakh combinations.</strong></p>
       
       <div class="param-grid">
         <div class="param-item">
@@ -37,9 +37,9 @@
           <div class="range-row">
             <input type="number" id="engulf_min_min" value="0" min="0" max="99">
             <span>to</span>
-            <input type="number" id="engulf_min_max" value="50" min="0" max="99">
+            <input type="number" id="engulf_min_max" value="99" min="0" max="99">
             <span>step</span>
-            <input type="number" id="engulf_min_step" value="5" min="1" max="99">
+            <input type="number" id="engulf_min_step" value="10" min="1" max="99">
           </div>
         </div>
         <div class="param-item">
@@ -47,9 +47,9 @@
           <div class="range-row">
             <input type="number" id="doji_body_max_min" value="0" min="0" max="99">
             <span>to</span>
-            <input type="number" id="doji_body_max_max" value="20" min="0" max="99">
+            <input type="number" id="doji_body_max_max" value="99" min="0" max="99">
             <span>step</span>
-            <input type="number" id="doji_body_max_step" value="2" min="1" max="99">
+            <input type="number" id="doji_body_max_step" value="10" min="1" max="99">
           </div>
         </div>
         <div class="param-item">
@@ -57,9 +57,9 @@
           <div class="range-row">
             <input type="number" id="activation_pts_min" value="0" min="0" max="99">
             <span>to</span>
-            <input type="number" id="activation_pts_max" value="50" min="0" max="99">
+            <input type="number" id="activation_pts_max" value="99" min="0" max="99">
             <span>step</span>
-            <input type="number" id="activation_pts_step" value="5" min="1" max="99">
+            <input type="number" id="activation_pts_step" value="10" min="1" max="99">
           </div>
         </div>
         <div class="param-item">
@@ -67,9 +67,9 @@
           <div class="range-row">
             <input type="number" id="lock_profit_min" value="0" min="0" max="99">
             <span>to</span>
-            <input type="number" id="lock_profit_max" value="50" min="0" max="99">
+            <input type="number" id="lock_profit_max" value="99" min="0" max="99">
             <span>step</span>
-            <input type="number" id="lock_profit_step" value="5" min="1" max="99">
+            <input type="number" id="lock_profit_step" value="10" min="1" max="99">
           </div>
         </div>
         <div class="param-item">
@@ -77,9 +77,9 @@
           <div class="range-row">
             <input type="number" id="profit_step_min" value="1" min="1" max="99">
             <span>to</span>
-            <input type="number" id="profit_step_max" value="30" min="1" max="99">
+            <input type="number" id="profit_step_max" value="99" min="1" max="99">
             <span>step</span>
-            <input type="number" id="profit_step_step" value="3" min="1" max="99">
+            <input type="number" id="profit_step_step" value="10" min="1" max="99">
           </div>
         </div>
         <div class="param-item">
@@ -87,9 +87,9 @@
           <div class="range-row">
             <input type="number" id="trail_step_min" value="1" min="1" max="99">
             <span>to</span>
-            <input type="number" id="trail_step_max" value="30" min="1" max="99">
+            <input type="number" id="trail_step_max" value="99" min="1" max="99">
             <span>step</span>
-            <input type="number" id="trail_step_step" value="3" min="1" max="99">
+            <input type="number" id="trail_step_step" value="10" min="1" max="99">
           </div>
         </div>
       </div>
@@ -144,45 +144,4 @@
     <!-- Results -->
     <section id="resultsCard" class="card" style="display:none;">
       <div class="tabs">
-        <div class="tab active" data-tab="table">Top 20 Results</div>
-        <div class="tab" data-tab="chart">Equity Curve</div>
-      </div>
-
-      <div id="tab-table">
-        <div id="statsGrid" class="stats-grid"></div>
-        <table class="results-table">
-          <thead>
-            <tr>
-              <th>#</th>
-              <th data-sort="netProfit">Net Profit</th>
-              <th data-sort="totalTrades">Trades</th>
-              <th data-sort="winRate">Win %</th>
-              <th data-sort="profitFactor">PF</th>
-              <th data-sort="sharpe">Sharpe</th>
-              <th data-sort="maxDrawdown">Max DD</th>
-              <th data-sort="avgTrade">Avg/Trade</th>
-              <th>Parameters</th>
-            </tr>
-          </thead>
-          <tbody id="resultsBody"></tbody>
-        </table>
-      </div>
-
-      <div id="tab-chart" style="display:none;">
-        <p class="muted">Equity curve for the #1 ranked parameter set. Click a row in the table to view that combination's equity curve.</p>
-        <canvas id="equityCanvas" style="width:100%;height:400px;"></canvas>
-      </div>
-    </section>
-
-    <section id="emptyCard" class="card">
-      <div class="empty-state">
-        <p>ðŸ“ˆ</p>
-        <p>Fetch data from Yahoo Finance and run the optimization to see results here.</p>
-      </div>
-    </section>
-  </div>
-
-  <script src="js/yahoo.js?v=2"></script>
-  <script src="js/app.js?v=3"></script>
-</body>
-</html>
+        <div class="tab active" data-tab="t`›H•ÜŒ™\Ý[ÏÙ]‚ˆ]ˆÛ\ÜÏHXˆˆ]K]XH˜Ú\‘\]Z]HÝ\™OÙ]‚ˆÙ]‚‚ˆ]ˆYHX‹]X›H‚ˆ]ˆYHœÝ]ÑÜšYˆÛ\ÜÏHœÝ]ËYÜšYÙ]‚ˆX›HÛ\ÜÏHœ™\Ý[Ë]X›H‚ˆXY‚ˆ‚ˆˆÏÝ‚ˆ]K\ÛÜH›™]›Ùš]“™]›Ùš]Ý‚ˆ]K\ÛÜHÝ[˜Y\È•˜Y\ÏÝ‚ˆ]K\ÛÜHÚ[”˜]H•Ú[ˆ	OÝ‚ˆ]K\ÛÜHœ›Ùš]˜XÝÜˆ”Ý‚ˆ]K\ÛÜHœÚ\œH”Ú\œOÝ‚ˆ]K\ÛÜH›X^˜]ÙÝÛˆ“X^Ý‚ˆ]K\ÛÜH˜]™Õ˜YH]™ËÕ˜YOÝ‚ˆ”\˜[Y]\œÏÝ‚ˆÝ‚ˆÝXY‚ˆ›ÙHYHœ™\Ý[Ð›ÙHÝ›ÙO‚ˆÝX›O‚ˆÙ]‚‚ˆ]ˆYHX‹XÚ\ˆÝ[OH™\Ü^N››Û™NÈ‚ˆÛ\ÜÏH›]]Y‘\]Z]HÝ\™H›ÜˆHÌH˜[šÙY\˜[Y]\ˆÙ]ˆÛXÚÈH›ÝÈ[ˆHX›HÈšY]È]ÛÛXš[˜][Û‰ÜÈ\]Z]HÝ\™KÜ‚ˆØ[˜\ÈYH™\]Z]PØ[˜\ÈˆÝ[OHÚYŒL	NÚZYÚÈØØ[˜\Ï‚ˆÙ]‚ˆÜÙXÝ[Û‚‚ˆÙXÝ[ÛˆYH™[\PØ\™ˆÛ\ÜÏH˜Ø\™‚ˆ]ˆÛ\ÜÏH™[\K\Ý]H‚ˆ¼'äâÜ‚ˆ‘™]Ú]Hœ›ÛHXZÛÈš[˜[˜ÙH[™[ˆHÜ[Z^˜][ÛˆÈÙYH™\Ý[È\™KÜ‚ˆÙ]‚ˆÜÙXÝ[Û‚ˆÙ]‚‚ˆØÜš\Ü˜ÏHšœËÞXZÛËšœÏÝLÈÜØÜš\‚ˆØÜš\Ü˜ÏHšœËØ\šœÏÝMÜØÜš\‚Ø›ÙO‚Ú[‚

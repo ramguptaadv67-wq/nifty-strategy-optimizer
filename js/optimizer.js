@@ -12,7 +12,7 @@
   "use strict";
 
   var TOP_N = 20;
-  var MAX_COMBOS = 2000000; // 2M safety limit
+  var MAX_COMBOS = 5000000; // 50 lakh safety limit
 
   /**
    * Count total combinations without building the array.
@@ -34,9 +34,9 @@
   }
 
   /**
-   * Generate parameter values for each key as an array.
-   * Returns { keys: [...], valueLists: [[...], [...], ...] }
-   */
+     * Generate parameter values for each key as an array.
+     * Returns { keys: [...], valueLists: [[...], [...], ...] }
+     */
   function buildValueLists(ranges, steps) {
     var keys = Object.keys(ranges);
     var valueLists = [];
@@ -56,7 +56,7 @@
   }
 
   /**
-   * Rolling top-N buffer. Keeps the best N results by `metricValue`.
+   * Rolling top-N buffer. Keeps the best N, results by `metricValue`.
    * Uses a simple sorted array (ascending by metricValue so worst is at index 0).
    */
   function TopNBuffer(n, isDesc) {
