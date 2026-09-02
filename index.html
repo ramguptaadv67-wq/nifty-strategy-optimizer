@@ -74,8 +74,8 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 </head>
 <body>
 <header>
-<h1>ğŸ“Š NIFTY Strategy Optimizer</h1>
-<p>Fetch live data from Yahoo Finance Â· Sweep parameter combinations Â· Get top 20 results</p>
+<h1> NIFTY Strategy Optimizer</h1>
+<p>Fetch live data from Yahoo Finance - Sweep parameter combinations - Get top 20 results</p>
 </header>
 <div class="container">
 
@@ -93,7 +93,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 
 <section class="card">
 <h2>2. Parameter Sweep Ranges</h2>
-<p class="muted">Set min/max for each parameter. Default range 0â€“99 with step 10. Max 50 lakh combinations.</p>
+<p class="muted">Set min/max for each parameter. Default range 0-99 with step 10. Max 50 lakh combinations.</p>
 <div class="param-grid">
 <div class="param-item"><label>Engulfing Min Body</label><div class="range-row"><input type="number" id="engulf_min_min" value="0" min="0" max="99"><span>to</span><input type="number" id="engulf_min_max" value="99" min="0" max="99"><span>step</span><input type="number" id="engulf_min_step" value="10" min="1" max="99"></div></div>
 <div class="param-item"><label>Doji Body Max</label><div class="range-row"><input type="number" id="doji_body_max_min" value="0" min="0" max="99"><span>to</span><input type="number" id="doji_body_max_max" value="99" min="0" max="99"><span>step</span><input type="number" id="doji_body_max_step" value="10" min="1" max="99"></div></div>
@@ -155,7 +155,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 </section>
 
 <section id="emptyCard" class="card">
-<div class="empty-state"><p>ğŸ“ˆ</p><p>Fetch data from Yahoo Finance and run the optimization to see results here.</p></div>
+<div class="empty-state"><p></p><p>Fetch data from Yahoo Finance and run the optimization to see results here.</p></div>
 </section>
 
 </div>
@@ -234,7 +234,7 @@ var YahooFinance = (function() {
       var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooInterval.appendChild(o);
     });
     YahooFinance.RANGES.forEach(function(r) {
-      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10+ years)":r;
+      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10) years)":r;
       if (r==="1y") o.selected=true; yahooRange.appendChild(o);
     });
   }
@@ -247,10 +247,10 @@ var YahooFinance = (function() {
       var result = await YahooFinance.fetchCandles(symbol, interval, range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
       csvText = result.csvText;
       if (runBtn) runBtn.disabled = false;
-      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="\u2713 Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" \u2192 "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"; }
+      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"; }
       if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization.";
     } catch(err) {
-      if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="\u2717 "+err.message; }
+      if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="[X] "+err.message; }
     } finally {
       yahooBtn.disabled = false; yahooBtn.textContent = "Fetch from Yahoo";
     }
@@ -271,138 +271,59 @@ var YahooFinance = (function() {
   function getComboCount() { var r=getRanges(),keys=Object.keys(r.ranges),t=1; for(var k of keys){var mn=r.ranges[k][0],mx=r.ranges[k][1],s=r.steps[k]||1;t*=Math.max(0,Math.floor((mx-mn)/s)+1);} return t; }
   function updateComboCount() {
     var t=getComboCount(),el=$("comboCount"); if(!el) return;
-    if(t>5000000){el.style.color="#e74c3c";el.textContent=t.toLocaleString("en-IN")+" combinations â€” TOO MANYHX^LZÚˆßBˆ[ÙHYŠŒL
-^Ù[œİ[K˜ÛÛÜHˆÙŒÎXÌLˆÙ[^ÛÛ[]ÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÛXš[˜][ÛœÈ8 %X^HZÙHHÚ[KˆßBˆ[Ù^Ù[œİ[K˜ÛÛÜHˆÌØYMŒÙ[^ÛÛ[]ÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÛXš[˜][ÛœÈ8 %™XYHÈ[‹ˆßBˆBˆÈ™[™İ[—ÛZ[ˆ‹™ÚšWØ›ÙWÛX^‹˜Xİ]˜][Û—ÜÈ‹›ØÚ×Ü›Ùš]‹œ›Ùš]Üİ\‹˜Z[Üİ\—K™›Ü‘XXÚ
-[˜İ[ÛŠŠ^ÖÈ—ÛZ[ˆ‹—ÛX^‹—Üİ\—K™›Ü‘XXÚ
-[˜İ[ÛŠÊ^İ˜\ˆOI
-ŠÜÊNÚYŠJYK˜Y]™[\İ[™\Šš[œ]‹\]PÛÛX›ĞÛİ[
-NßJNßJNÂˆ\]PÛÛX›ĞÛİ[
+    if(t>5000000){el.style.color="#e74c3c";el.textContent=t.toLocaleString("en-IN")+" combinations - TOO MANY! Max 50 lakh.";}
+    else if(t>100000){el.style.color="#f39c12";el.textContent=t.toLocaleString("en-IN")+" combinations - may take a while.";}
+    else{el.style.color="#27ae60";el.textContent=t.toLocaleString("en-IN")+" combinations - ready to run.";}
+  }
+  ["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].forEach(function(n){["_min","_max","_step"].forEach(function(s){var e=$(n+s);if(e)e.addEventListener("input",updateComboCount);});});
+  updateComboCount();
 
-NÂ‚ˆYˆ
-[ŠH[‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
-HÂˆYŠXÜİ•^
-H™]\›Âˆ˜\ˆØÏYÙ]ÛÛX›ĞÛİ[
+  if (runBtn) runBtn.addEventListener("click", function() {
+    if(!csvText) return;
+    var cc=getComboCount(); if(cc>5000000){var pw=$("progressWrap");if(pw)pw.style.display="block";var pt=$("progressText");if(pt)pt.textContent="Error: "+cc.toLocaleString("en-IN")+" too many. Increase step sizes.";return;}
+    runBtn.disabled=true; var pw=$("progressWrap");if(pw)pw.style.display="block"; var pf=$("progressFill");if(pf)pf.style.width="0%"; var pt=$("progressText");if(pt)pt.textContent="Initializing...";
+    var r=getRanges(),fp=getFixedParams(),sm=$("sortMetric")?$("sortMetric").value:"netProfit";
+    if(worker) worker.terminate();
+    worker=new Worker("js/worker.js?v="+Date.now());
+    worker.onmessage=function(e){var m=e.data;var pt2=$("progressText"),pf2=$("progressFill"),pw2=$("progressWrap");
+      if(m.type==="parsed"){if(pt2)pt2.textContent=m.candleCount+" candles parsed. Sweeping...";}
+      else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf2)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
+      else if(m.type==="done"){topResults=m.result.top;if(pw2)pw2.style.display="none";runBtn.disabled=false;renderResults(m.result);}
+      else if(m.type==="error"){if(pt2)pt2.textContent="Error: "+m.message;runBtn.disabled=false;}
+      else if(m.type==="singleDone"){drawChart(m.result.equity);}
+    };
+    worker.onerror=function(e){if(pt)pt.textContent="Worker Error: "+(e.message||"unknown");runBtn.disabled=false;};
+    worker.postMessage({type:"optimize",csvText:csvText,ranges:r.ranges,fixedParams:fp,steps:r.steps,sortMetric:sm});
+  });
 
-NÈYŠØÏL
-^İ˜\ˆÏI
-œ›ÙÜ™\ÜÕÜ˜\ŠNÚYŠÊ\Ëœİ[K™\Ü^OH˜›ØÚÈİ˜\ˆI
-œ›ÙÜ™\ÜÕ^ŠNÚYŠ
-\^ÛÛ[H‘\œ›ÜˆŠØØËÓØØ[Tİš[™Ê™[‹RSˆŠJÈˆÛÈX[Kˆ[˜Ü™X\ÙHİ\Ú^™\ËˆÜ™]\›ßBˆ[‹™\ØX›Y]YNÈ˜\ˆÏI
-œ›ÙÜ™\ÜÕÜ˜\ŠNÚYŠÊ\Ëœİ[K™\Ü^OH˜›ØÚÈÈ˜\ˆI
-œ›ÙÜ™\ÜÑš[ŠNÚYŠŠ\‹œİ[KÚYHŒ	HÈ˜\ˆI
-œ›ÙÜ™\ÜÕ^ŠNÚYŠ
-\^ÛÛ[H’[š]X[^š[™Ë‹‹ˆÂˆ˜\ˆYÙ]˜[™Ù\Ê
-KœYÙ]š^Y\˜[\Ê
-KÛOI
-œÛÜY]šXÈŠOÉ
-œÛÜY]šXÈŠK˜[YNˆ›™]›Ùš]ÂˆYŠÛÜšÙ\ŠHÛÜšÙ\‹\›Z[˜]J
-NÂˆÛÜšÙ\[™]ÈÛÜšÙ\ŠšœËİÛÜšÙ\‹šœÏİHŠÑ]K››İÊ
-JNÂˆÛÜšÙ\‹›Û›Y\ÜØYÙOY[˜İ[ÛŠJ^İ˜\ˆOYK™]Nİ˜\ˆI
-œ›ÙÜ™\ÜÕ^ŠKŒI
-œ›ÙÜ™\ÜÑš[ŠKÌI
-œ›ÙÜ™\ÜÕÜ˜\ŠNÂˆYŠK\OOOHœ\œÙYŠ^ÚYŠŠ\‹^ÛÛ[[K˜Ø[™PÛİ[
-ÈˆØ[™\È\œÙYˆİÙY\[™Ë‹‹ˆßBˆ[ÙHYŠK\OOOHœ›ÙÜ™\ÜÈŠ^İ˜\ˆJK™Û™KÛKİ[
-JŒLÚYŠŒŠ\Œ‹œİ[KÚY\
-È‰HÚYŠŠ\‹^ÛÛ[[K™Û™JÈˆÈŠÛKİ[
-Èˆ
-ŠÜÑš^Y
-JJÈ‰JHßBˆ[ÙHYŠK\OOOH™Û™HŠ^İÜ™\İ[Ï[Kœ™\İ[ÜÚYŠÌŠ\Ì‹œİ[K™\Ü^OH››Û™HÜ[‹™\ØX›YY˜[ÙNÜ™[™\”™\İ[ÊKœ™\İ[
-NßBˆ[ÙHYŠK\OOOH™\œ›ÜˆŠ^ÚYŠŠ\‹^ÛÛ[H‘\œ›ÜˆŠÛK›Y\ÜØYÙNÜ[‹™\ØX›YY˜[ÙNßBˆ[ÙHYŠK\OOOHœÚ[™ÛQÛ™HŠ^Ù˜]ĞÚ\
-Kœ™\İ[™\]Z]JNßBˆNÂˆÛÜšÙ\‹›Û™\œ›ÜY[˜İ[ÛŠJ^ÚYŠ
-\^ÛÛ[H•ÛÜšÙ\ˆ\œ›ÜˆŠÊK›Y\ÜØYÙ_[šÛ›İÛˆŠNÜ[‹™\ØX›YY˜[ÙNßNÂˆÛÜšÙ\‹œÜİY\ÜØYÙJİ\Nˆ›Ü[Z^™H‹Üİ•^˜Üİ•^˜[™Ù\Îœ‹œ˜[™Ù\Ëš^Y\˜[\Î™œİ\Îœ‹œİ\ËÛÜY]šXÎœÛ_JNÂˆJNÂ‚ˆ[˜İ[Ûˆ›]
-‹XÊ^ÙXÏYXßÚYŠZ\Ñš[š]JŠJ\™]\›ˆ—LŒŒYHÜ™]\›ˆ[X™\ŠŠKÓØØ[Tİš[™Ê™[‹RSˆ‹ÛZ[š[][Qœ˜Xİ[Û‘YÚ]Î™XËX^[][Qœ˜Xİ[Û‘YÚ]Î™XßJNßBˆ[˜İ[Ûˆ™[™\”™\İ[Ê™\İ[
-HÂˆ˜\ˆXÏI
-™[\PØ\™ŠK˜ÏI
-œ™\İ[ĞØ\™ŠNÚYŠXÊYXËœİ[K™\Ü^OH››Û™HÚYŠ˜Ê\˜Ëœİ[K™\Ü^OH˜›ØÚÈÂˆ˜\ˆ™\İ\™\İ[ÜÌ_ÛY]šXÜÎß_KÙÏI
-œİ]ÑÜšYŠNÂˆYŠÙÊ^İ˜\ˆİ]ÏVŞİ˜[œ™\İ[İ[\İYÓØØ[Tİš[™Ê™[‹RSˆŠKX™[ˆÛÛX›ÜÈ\İYŸKİ˜[œ™\İ[Ü›[™İX™[ˆ•Ü™\İ[ÈŸKİ˜[™›]
-™\İ›Y]šXÜË›™]›Ùš]
-KX™[ˆ™\İ™]›Ùš]ŸKİ˜[™›]
-™\İ›Y]šXÜËÚ[”˜]KJJÈ‰H‹X™[ˆ™\İÚ[ˆ˜]HŸKİ˜[™›]
-™\İ›Y]šXÜËœÚ\œKŠKX™[ˆ™\İÚ\œHŸWNÂˆÙËš[›™\’S\İ]Ë›X\
-[˜İ[ÛŠÊ^Ü™]\›‰Ï]ˆÛ\ÜÏHœİ]Z][H]ˆÛ\ÜÏHœİ]]˜[‰ÊÜË˜[
-ÉÏÙ]]ˆÛ\ÜÏHœİ][X™[‰ÊÜË›X™[
-ÉÏÙ]Ù]‰ÎßJKš›Ú[ŠˆŠNßBˆ™[™\•X›J
-NÈ™[™\Ú\
-
-NÂˆBˆ[˜İ[Ûˆ™[™\•X›J
-HÂˆ˜\ˆI
-œ™\İ[Ğ›ÙHŠNÈYŠ]ŠH™]\›Âˆ‹š[›™\’S]Ü™\İ[Ë›X\
-[˜İ[ÛŠ‹J^İ˜\ˆO\‹›Y]šXÜËÏ[K›™]›Ùš]LÈœÜÈˆ›™YÈÂˆ˜\ˆÏSØš™Xİ™[šY\Ê‹œ\˜[\ÊK™š[\Š[˜İ[ÛŠÊ^Ü™]\›–È™[™İ[—ÛZ[ˆ‹™ÚšWØ›ÙWÛX^‹˜Xİ]˜][Û—ÜÈ‹›ØÚ×Ü›Ùš]‹œ›Ùš]Üİ\‹˜Z[Üİ\—Kš[™^ÙŠÖÌJOLßJK›X\
-[˜İ[ÛŠÊ^Ü™]\›ˆÖÌKœÜ]
-—ÈŠVÌJÈHŠÚÖÌWNßJKš›Ú[Š‹ŠNÂˆ™]\›‰Ïˆ]KZYH‰ÊÚJÉÈ‰ÊÊJÌJJÉÏİÛ\ÜÏH‰ÊÜÊÉÈ‰ÊÙ›]
-K›™]›Ùš]
-JÉÏİ‰ÊÛKİ[˜Y\ÊÉÏİ‰ÊÙ›]
-KÚ[”˜]KJJÉÉOİ‰ÊÙ›]
-Kœ›Ùš]˜XİÜ‹ŠJÉÏİ‰ÊÙ›]
-KœÚ\œKŠJÉÏİ‰ÊÙ›]
-K›X^˜]ÙİÛ‹
-JÉÏİ‰ÊÙ›]
-K˜]™Õ˜YKJJÉÏİÛ\ÜÏHœ\˜[\ËXÙ[‰ÊÜÊÉÏİİ‰ÎÂˆJKš›Ú[ŠˆŠNÂˆ‹œ]Y\TÙ[XİÜ[
-ˆŠK™›Ü‘XXÚ
-[˜İ[ÛŠŠ^İ‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
-^İ‹œ]Y\TÙ[XİÜ[
-ˆŠK™›Ü‘XXÚ
-[˜İ[ÛŠŠ^Ü‹˜Û\ÜÓ\İœ™[[İ™J˜Xİ]™HŠNßJNİ‹˜Û\ÜÓ\İ˜Y
-˜Xİ]™HŠNÜ™[™\Ú\
-\œÙR[
-‹™]\Ù]šY
-JNİ˜\ˆİYØİ[Y[œ]Y\TÙ[XİÜŠ	ËX–Ù]K]XH˜Ú\—IÊNÚYŠİ
-Xİ˜ÛXÚÊ
-NßJNßJNÂˆBˆ[˜İ[Ûˆ™[™\Ú\
-Y
-^İ˜\ˆ]Ü™\İ[ÖÚYNÚYŠ\Š\™]\›ÚYŠÛÜšÙ\Š]ÛÜšÙ\‹œÜİY\ÜØYÙJİ\NˆœÚ[™ÛH‹Üİ•^˜Üİ•^\˜[\Îœ‹œ\˜[\ßJNßBˆ[˜İ[Ûˆ˜]ĞÚ\
-\]Z]J^Âˆ˜\ˆØ[˜\ÏI
-™\]Z]PØ[˜\ÈŠNÚYŠXØ[˜\Ê\™]\›İ˜\ˆİXØ[˜\Ë™Ù]ÛÛ^
-Œ™ŠNİ˜\ˆÏXØ[˜\ËÚYXØ[˜\Ë›Ù™œÙ]ÚYXØ[˜\ËšZYÚXØ[˜\Ë›Ù™œÙ]ZYÚØİ˜ÛX\”™Xİ
-Ë
-NÂˆYŠY\]Z]_\]Z]K›[™İOOL
-^Øİ™š[İ[OHˆÎNNHØİ™›ÛHŒMØ[œË\Ù\šYˆØİ^[YÛH˜Ù[\ˆØİ™š[^
-“›È˜Y\È‹ËÌ‹ÌŠNÜ™]\›ßBˆ˜\ˆ˜[ÏY\]Z]K›X\
-[˜İ[ÛŠJ^Ü™]\›ˆK™\]Z]NßJKZ[•SX]›Z[‹˜\J[˜[Ë˜ÛÛ˜Ø]
-ÌJJKX^SX]›X^˜\J[˜[Ë˜ÛÛ˜Ø]
-ÌWJJK˜[™ÙO[X^‹[Z[•ŸKYMÂˆİœİ›ÚÙTİ[OHˆÍˆØİ›[™UÚYLNØİ˜™YÚ[”]
-
-NØİ›[İ™UÊY\YJ
-[Z[•ŠKÜ˜[™ÙJJŠLŠœY
-JNØİ›[™UÊË\Y\YJ
-[Z[•ŠKÜ˜[™ÙJJŠLŠœY
-JNØİœİ›ÚÙJ
-NÂˆİœİ›ÚÙTİ[OHˆÍ˜ÌÙÈØİ›[™UÚYLØİ˜™YÚ[”]
-
-NÙ\]Z]K™›Ü‘XXÚ
-[˜İ[ÛŠJ^İ˜\ˆ\Y
-ÊKÓX]›X^
-K\]Z]K›[™İLJJJŠËLŠœY
-KOR\YJ
-™\]Z]K[Z[•ŠKÜ˜[™ÙJJŠLŠœY
-NÚYŠOOOL
-Xİ›[İ™UÊJNÙ[ÙHİ›[™UÊJNßJNØİœİ›ÚÙJ
-NÂˆİ›[™UÊY
-ÊËLŠœY
-K\Y
-NØİ›[™UÊY\Y
-NØİ˜ÛÜÙT]
-
-NØİ™š[İ[OHœ™Ø˜JÎKNMKËŒMJHØİ™š[
-
-NÂˆBˆØİ[Y[œ]Y\TÙ[XİÜ[
-‹XˆŠK™›Ü‘XXÚ
-[˜İ[ÛŠXŠ^İX‹˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
-^ÙØİ[Y[œ]Y\TÙ[XİÜ[
-‹XˆŠK™›Ü‘XXÚ
-[˜İ[ÛŠ
-^İ˜Û\ÜÓ\İœ™[[İ™J˜Xİ]™HŠNßJNİX‹˜Û\ÜÓ\İ˜Y
-˜Xİ]™HŠNİ˜\ˆI
-X‹]X›HŠKÏI
-X‹XÚ\ŠNÚYŠ
-]œİ[K™\Ü^O]X‹™]\Ù]XOOHX›HÈ˜›ØÚÈˆ››Û™HÚYŠÊ]Ëœİ[K™\Ü^O]X‹™]\Ù]XOOH˜Ú\È˜›ØÚÈˆ››Û™HÚYŠX‹™]\Ù]XOOH˜Ú\Š^İ˜\ˆ\YØİ[Y[œ]Y\TÙ[XİÜŠˆÜ™\İ[Ğ›ÙH‹˜Xİ]™HŠ_Øİ[Y[œ]Y\TÙ[XİÜŠˆÜ™\İ[Ğ›ÙHˆŠNÚYŠ\Š\™[™\Ú\
-\œÙR[
-\‹™]\Ù]šY
-JNß_JNßJNÂˆØİ[Y[œ]Y\TÙ[XİÜ[
-Ù]K\ÛÜHŠK™›Ü‘XXÚ
-[˜İ[ÛŠ
-^İ˜Y]™[\İ[™\Š˜ÛXÚÈ‹[˜İ[ÛŠ
-^İ˜\ˆO]™]\Ù]œÛÜÚYŠİ\œ™[ÛÜOO[J\ÛÜ\ØÏH\ÛÜ\ØÎÙ[Ù^Øİ\œ™[ÛÜ[NÜÛÜ\ØÏ]YNß]Ü™\İ[ËœÛÜ
-[˜İ[ÛŠKŠ^İ˜\ˆ]XK›Y]šXÜÖÛWKX‹›Y]šXÜÖÛWNÚYŠ\Ñš[š]J]ŠI‰š\Ñš[š]JŠJ\™]\›ˆÛÜ\ØÏØ‹X]˜]‹XÜ™]\›ˆßJNÜ™[™\•X›J
-NßJNßJNÂŸJJ
-NÂÜØÜš\‚Ø›ÙO‚Ú[‚
+  function fmt(n,dec){dec=dec||2;if(!isFinite(n))return"N/A";return Number(n).toLocaleString("en-IN",{minimumFractionDigits:dec,maximumFractionDigits:dec});}
+  function renderResults(result) {
+    var ec=$("emptyCard"),rc=$("resultsCard");if(ec)ec.style.display="none";if(rc)rc.style.display="block";
+    var best=result.top[0]||{metrics:{}},sg=$("statsGrid");
+    if(sg){var stats=[{val:result.totalTested.toLocaleString("en-IN"),label:"Combos Tested"},{val:result.top.length,label:"Top Results"},{val:fmt(best.metrics.netProfit,0),label:"Best Net Profit"},{val:fmt(best.metrics.winRate,1)+"%",label:"Best Win Rate"},{val:fmt(best.metrics.sharpe,2),label:"Best Sharpe"}];
+      sg.innerHTML=stats.map(function(s){return'<div class="stat-item"><div class="stat-val">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>';}).join("");}
+    renderTable(); renderChart(0);
+  }
+  function renderTable() {
+    var tb=$("resultsBody"); if(!tb) return;
+    tb.innerHTML=topResults.map(function(r,i){var m=r.metrics,pc=m.netProfit>=0?"pos":"neg";
+      var ps=Object.entries(r.params).filter(function(k){return["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].indexOf(k[0])>=0;}).map(function(k){return k[0].split("_")[0]+"="+k[1];}).join(", ");
+      return'<tr data-idx="'+i+'"><td>'+(i+1)+'</td><td class="'+pc+'">'+fmt(m.netProfit,0)+'</td><td>'+m.totalTrades+'</td><td>'+fmt(m.winRate,1)+'%</td><td>'+fmt(m.profitFactor,2)+'</td><td>'+fmt(m.sharpe,2)+'</td><td>'+fmt(m.maxDrawdown,0)+'</td><td>'+fmt(m.avgTrade,1)+'</td><td class="params-cell">'+ps+'</td></tr>';
+    }).join("");
+    tb.querySelectorAll("tr").forEach(function(tr){tr.addEventListener("click",function(){tb.querySelectorAll("tr").forEach(function(r){r.classList.remove("active");});tr.classList.add("active");renderChart(parseInt(tr.dataset.idx));var ct=document.querySelector('.tab[data-tab="chart"]');if(ct)ct.click();});});
+  }
+  function renderChart(idx){var r=topResults[idx];if(!r)return;if(worker)worker.postMessage({type:"single",csvText:csvText,params:r.params});}
+  function drawChart(equity){
+    var canvas=$("equityCanvas");if(!canvas)return;var ctx=canvas.getContext("2d");var W=canvas.width=canvas.offsetWidth,H=canvas.height=canvas.offsetHeight;ctx.clearRect(0,0,W,H);
+    if(!equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
+    var vals=equity.map(function(e){return e.equity;}),minV=Math.min.apply(null,vals.concat([0])),maxV=Math.max.apply(null,vals.concat([1])),range=maxV-minV||1,pad=40;
+    ctx.strokeStyle="#666";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.lineTo(W-pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.stroke();
+    ctx.strokeStyle="#4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,equity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+    ctx.lineTo(pad+(W-2*pad),H-pad);ctx.lineTo(pad,H-pad);ctx.closePath();ctx.fillStyle="rgba(79,195,247,0.15)";ctx.fill();
+  }
+  document.querySelectorAll(".tab").forEach(function(tab){tab.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});tab.classList.add("active");var tt=$("tab-table"),tc=$("tab-chart");if(tt)tt.style.display=tab.dataset.tab==="table"?"block":"none";if(tc)tc.style.display=tab.dataset.tab==="chart"?"block":"none";if(tab.dataset.tab==="chart"){var ar=document.querySelector("#resultsBody tr.active")||document.querySelector("#resultsBody tr");if(ar)renderChart(parseInt(ar.dataset.idx));}});});
+  document.querySelectorAll("th[data-sort]").forEach(function(th){th.addEventListener("click",function(){var m=th.dataset.sort;if(currentSort===m)sortDesc=!sortDesc;else{currentSort=m;sortDesc=true;}topResults.sort(function(a,b){var av=a.metrics[m],bv=b.metrics[m];if(isFinite(av)&&isFinite(bv))return sortDesc?bv-av:av-bv;return 0;});renderTable();});});
+})();
+</script>
+</body>
+</html>
