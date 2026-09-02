@@ -3,7 +3,7 @@
  *
  * When total combinations exceed SAMPLE_LIMIT (100,000), picks random
  * combinations to test instead of iterating through all of them.
- * This makes huge parameter spaces (billions of combos) finish in seconds.
+ * Uses seeded PRNG (mulberry32, seed=42) so results are reproducible.
  *
  * Exposes `optimizeParams(candles, ranges, fixedParams, steps, onProgress, sortMetric)` on globalThis.
  */
@@ -45,6 +45,18 @@
       valueLists.push(vals);
     }
     return { keys: keys, valueLists: valueLists };
+  }
+
+  // Seeded PRNG (mulberry32) - same seed = same results every time
+  function makeRng(seed) {
+    var s = seed | 0;
+    return function() {
+      s = (s + 0x6D2B79F5) | 0;
+      var t = s;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
   }
 
   function TopNBuffer(n, isDesc) {
@@ -129,14 +141,14 @@
     var topBuffer = new TopNBuffer(TOP_N, isDesc);
     var tested = 0;
 
-    // Decide: full sweep or random sampling?
     var useSampling = total > SAMPLE_LIMIT;
     var targetCount = useSampling ? SAMPLE_LIMIT : total;
 
     if (onProgress) onProgress(0, targetCount);
 
     if (useSampling) {
-      // RANDOM SAMPLING: pick random combinations
+      // RANDOM SAMPLING with seeded PRNG (reproducible)
+      var rng = makeRng(42);
       var seen = {};
       var attempts = 0;
       var maxAttempts = SAMPLE_LIMIT * 3;
@@ -146,7 +158,7 @@
 
         var params = {};
         for (var p = 0; p < numParams; p++) {
-          var idx = Math.floor(Math.random() * valueLists[p].length);
+          var idx = Math.floor(rng() * valueLists[p].length);
           params[keys[p]] = valueLists[p][idx];
         }
 
