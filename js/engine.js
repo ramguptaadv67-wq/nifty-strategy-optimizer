@@ -1,5 +1,5 @@
 /**
- * engine.js — Backtesting engine
+ * engine.js - Backtesting engine
  * Faithful translation of the NIFTY "webhook()" Pine Script v5 strategy.
  *
  * Exposes a single function `runBacktest(candles, params)` on `globalThis`.
@@ -109,15 +109,25 @@
       const monthlyCloseNow = p.exit_on_monthly && isLastDowMonth && inMonthlyWindow;
 
       // === 1. Check pending TSL exits (from previous bar close) ===
+      // For a long sell-stop: triggers when bar.low <= stop.
+      //   If stop >= bar.open (bar opened below stop), fill at bar.open (gap).
+      //   If bar.low <= stop < bar.open, fill at stop price.
+      //   If stop < bar.low, no trigger (price never reached stop).
       if (position === 1 && !isNaN(pendingLongTsl)) {
-        if (bar.low <= pendingLongTsl) {
-          closeLong(pendingLongTsl, bar.time, "TSL Exit", i);
+        if (pendingLongTsl >= bar.low) {
+          var longFill = Math.min(pendingLongTsl, bar.open);
+          closeLong(longFill, bar.time, "TSL Exit", i);
           resetTsl(); pendingLongTsl = NaN;
         }
       }
+      // For a short buy-stop: triggers when bar.high >= stop.
+      //   If stop <= bar.open (bar opened above stop), fill at bar.open (gap).
+      //   If bar.high >= stop > bar.open, fill at stop price.
+      //   If stop > bar.high, no trigger.
       if (position === -1 && !isNaN(pendingShortTsl)) {
-        if (bar.high >= pendingShortTsl) {
-          closeShort(pendingShortTsl, bar.time, "TSL Exit", i);
+        if (pendingShortTsl <= bar.high) {
+          var shortFill = Math.max(pendingShortTsl, bar.open);
+          closeShort(shortFill, bar.time, "TSL Exit", i);
           resetTsl(); pendingShortTsl = NaN;
         }
       }
@@ -188,6 +198,8 @@
           const extraProfit = Math.max(0.0, longHh - ep - p.activation_pts);
           const tslMove = Math.floor(extraProfit / p.profit_step) * p.trail_step;
           longTsl = ep + p.lock_profit + tslMove;
+          // Clamp: TSL must never be above current close (would be above market)
+          if (longTsl > bar.close) longTsl = bar.close;
         } else { longTsl = NaN; }
       }
       if (!isLong) { longHh = NaN; longTsl = NaN; }
@@ -199,6 +211,8 @@
           const extraProfit = Math.max(0.0, ep - shortLl - p.activation_pts);
           const tslMove = Math.floor(extraProfit / p.profit_step) * p.trail_step;
           shortTsl = ep - p.lock_profit - tslMove;
+          // Clamp: TSL must never be below current close (would be below market)
+          if (shortTsl < bar.close) shortTsl = bar.close;
         } else { shortTsl = NaN; }
       }
       if (!isShort) { shortLl = NaN; shortTsl = NaN; }
