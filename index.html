@@ -42,7 +42,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 .filter-grid label{display:flex;align-items:center;gap:.4rem;font-size:.82rem;color:var(--text-dim);cursor:pointer}
 .filter-grid input[type="checkbox"]{accent-color:var(--accent);width:16px;height:16px}
 .filter-row{display:flex;align-items:center;gap:.5rem;flex-wrap:wrap;margin-bottom:.5rem}
-.filter-row label{font-size:.8rem;color:var(--text-dim);white-space:nowrap}
+.filter-row label{font-size:.82rem;color:var(--text-dim);white-space:nowrap}
 .filter-row select,.filter-row input{background:var(--surface2);border:1px solid var(--border);border-radius:4px;color:var(--text);padding:6px 10px;font-size:.82rem;cursor:pointer}
 .filter-row select:hover,.filter-row input:hover{border-color:var(--accent)}
 .progress-wrap{margin-top:1rem;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:1rem;display:none}
@@ -161,7 +161,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 </div>
 
 <script>
-// ===== YAHOO FINANCE (inlined from yahoo.js) =====
+// ========== YAHOO FINANCE (inlined) ==========
 var YahooFinance = (function() {
   var SYMBOLS = { "NIFTY 50": "^NSEI", "SENSEX": "^BSESN" };
   var INTERVALS = { "1 min":"1m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
@@ -216,7 +216,7 @@ var YahooFinance = (function() {
 </script>
 
 <script>
-// ===== APP (inlined from app.js) =====
+// ========== APP (inlined) ==========
 (function() {
   "use strict";
   var csvText = null, worker = null, topResults = [], currentSort = "netProfit", sortDesc = true;
@@ -234,7 +234,7 @@ var YahooFinance = (function() {
       var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooInterval.appendChild(o);
     });
     YahooFinance.RANGES.forEach(function(r) {
-      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10) years)":r;
+      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10 years)":r;
       if (r==="1y") o.selected=true; yahooRange.appendChild(o);
     });
   }
@@ -278,7 +278,8 @@ var YahooFinance = (function() {
 
   if (runBtn) runBtn.addEventListener("click", function() {
     if(!csvText) return;
-    var cc=getComboCount();    if(cc>5000000){var pw=$("progressWrap");if(pw)pw.style.display="block";var pt=$("progressText");if(pt)pt.textContent="Error: "+cc.toLocaleString("en-IN")+" too many. Narrow your ranges.";return;}
+    var cc=getComboCount();
+    if(cc>5000000){var pw=$("progressWrap");if(pw)pw.style.display="block";var pt=$("progressText");if(pt)pt.textContent="Error: "+cc.toLocaleString("en-IN")+" too many. Narrow your ranges.";return;}
     runBtn.disabled=true; var pw=$("progressWrap");if(pw)pw.style.display="block"; var pf=$("progressFill");if(pf)pf.style.width="0%"; var pt=$("progressText");if(pt)pt.textContent="Initializing...";
     var r=getRanges(),fp=getFixedParams(),sm=$("sortMetric")?$("sortMetric").value:"netProfit";
     var steps={}; Object.keys(r.ranges).forEach(function(k){steps[k]=1;});
@@ -300,24 +301,24 @@ var YahooFinance = (function() {
     var ec=$("emptyCard"),rc=$("resultsCard");if(ec)ec.style.display="none";if(rc)rc.style.display="block";
     var best=result.top[0]||{metrics:{}},sg=$("statsGrid");
     if(sg){var stats=[{val:result.totalTested.toLocaleString("en-IN"),label:"Combos Tested"},{val:result.top.length,label:"Top Results"},{val:fmt(best.metrics.netProfit,0),label:"Best Net Profit"},{val:fmt(best.metrics.winRate,1)+"%",label:"Best Win Rate"},{val:fmt(best.metrics.sharpe,2),label:"Best Sharpe"}];
-      sg.innerHTML=stats.map(function(s){return'<div class="stat-item"><div class="stat-val">'+s.val+'</div><div class="stat-label">'s.label+'</div></div>';}).join("");}
+      sg.innerHTML=stats.map(function(s){return'<div class="stat-item"><div class="stat-val">'+s.val+'</div><div class="stat-label">'+s.label+'</div></div>';}).join("");}
     renderTable(); renderChart(0);
   }
   function renderTable() {
     var tb=$("resultsBody"); if(!tb) return;
     tb.innerHTML=topResults.map(function(r,i){var m=r.metrics,pc=m.netProfit>=0?"pos":"neg";
       var ps=Object.entries(r.params).filter(function(k){return["engulf_min","doji_body_max","activation_pts","lock_profit","profit_step","trail_step"].indexOf(k[0])>=0;}).map(function(k){return k[0].split("_")[0]+"="+k[1];}).join(", ");
-      return'<tr data-idx="'+i+'"><td>'+(i+1)+'</td><td class="'+pc+'">'+fmt(m.netProfit,0)+'</td><td>'~m.totalTrades+'</td><td>'+fmt(m.winRate,1)+'%</td><td>'+fmt(m.profitFactor,2)+'</td><td>'~fmt(m.sharpe,2)+'</td><td>'+fmt(m.maxDrawdown,0)+'</td><td>'+fmt(m.avgTrade,1)+'</td><td class="params-cell">'~ps+'</td></tr>';
-    }.join("");
+      return'<tr data-idx="'+i+'"><td>'+(i+1)+'</td><td class="'+pc+'">'+fmt(m.netProfit,0)+'</td><td>'+m.totalTrades+'</td><td>'+fmt(m.winRate,1)+'%</td><td>'+fmt(m.profitFactor,2)+'</td><td>'+fmt(m.sharpe,2)+'</td><td>'+fmt(m.maxDrawdown,0)+'</td><td>'+fmt(m.avgTrade,1)+'</td><td class="params-cell">'+ps+'</td></tr>';
+    }).join("");
     tb.querySelectorAll("tr").forEach(function(tr){tr.addEventListener("click",function(){tb.querySelectorAll("tr").forEach(function(r){r.classList.remove("active");});tr.classList.add("active");renderChart(parseInt(tr.dataset.idx));var ct=document.querySelector('.tab[data-tab="chart"]');if(ct)ct.click();});});
   }
-  function renderChart(idx){var r=topResults[idx];if(!r)return;if(worker)worker.postMessage({type:"single",csvText:csvText,LRAMs:r.params});}
+  function renderChart(idx){var r=topResults[idx];if(!r)return;if(worker)worker.postMessage({type:"single",csvText:csvText,params:r.params});}
   function drawChart(equity){
     var canvas=$("equityCanvas");if(!canvas)return;var ctx=canvas.getContext("2d");var W=canvas.width=canvas.offsetWidth,H=canvas.height=canvas.offsetHeight;ctx.clearRect(0,0,W,H);
-    if(!Equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
-    var vals=equity.map(function(e){return e.equity;}),minV=q!th.min.apply(null,vals.concat([0])),maxV=Math.max.aaply(null,vals.concat([1])),range=maxV-minV||1,pad=40;
+    if(!equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
+    var vals=equity.map(function(e){return e.equity;}),minV=Math.min.apply(null,vals.concat([0])),maxV=Math.max.apply(null,vals.concat([1])),range=maxV-minV||1,pad=40;
     ctx.strokeStyle="#666";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.lineTo(W-pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.stroke();
-    ctx.strokeStyle="#4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,e8uity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+    ctx.strokeStyle="#4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,equity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
     ctx.lineTo(pad+(W-2*pad),H-pad);ctx.lineTo(pad,H-pad);ctx.closePath();ctx.fillStyle="rgba(79,195,247,0.15)";ctx.fill();
   }
   document.querySelectorAll(".tab").forEach(function(tab){tab.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});tab.classList.add("active");var tt=$("tab-table"),tc=$("tab-chart");if(tt)tt.style.display=tab.dataset.tab==="table"?"block":"none";if(tc)tc.style.display=tab.dataset.tab==="chart"?"block":"none";if(tab.dataset.tab==="chart"){var ar=document.querySelector("#resultsBody tr.active")||document.querySelector("#resultsBody tr");if(ar)renderChart(parseInt(ar.dataset.idx));}});});
