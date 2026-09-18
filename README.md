@@ -1,112 +1,92 @@
 # NIFTY Strategy Optimizer
 
-Upload your OHLCV candle data (CSV), sweep **all parameter combinations** across configurable ranges (default 0â€“99), and instantly get the **top 20 best-performing parameter sets** for the NIFTY engulfing-doji-TSL strategy.
+Fetch live NIFTY data (index charts from Yahoo Finance, NIFTY futures from NSE), sweep **all parameter combinations** across configurable ranges (default 0-99), and instantly get the **top 20 best-performing parameter sets** for the NIFTY engulfing-doji-TSL strategy.
 
-A faithful JavaScript port of the Pine Script v5 `strategy("NIFTY â€” webhook()")` strategy, running entirely in your browser via Web Workers. No server, no data leaves your machine.
+A faithful JavaScript port of the Pine Script v5 `strategy("NIFTY â€” webhook()")` strategy, running entirely in your browser via Web Workers. The only backend is a Cloudflare Worker that proxies data (no CORS issues).
 
 ## What it does
 
-1. **Parses** your CSV OHLCV data (TradingView export, Yahoo Finance, Zerodha, etc.)
-2. **Translates** the Pine Script strategy to JavaScript â€” engulfing detection, doji setup-line touches, Tradetron-style trailing stop-loss (TSL), day-of-week/monthly-expiry filters, candle-based time exits
-3. **Sweeps** every parameter combination you configure (engulf_min, doji_body_max, activation_pts, lock_profit, profit_step, trail_step â€” each 0â€“99 by default)
+1. **Fetches** live candle data - pick a chart (NIFTY 50, NIFTY 50 FUTURES, SENSEX, BANK NIFTY, FINNIFTY, MIDCAP 100, SMLCAP 250, NIFTY IT), a timeframe (1m to 1 month, including 3-min built from 1-min data), and a range
+2. **Translates** the Pine Script strategy to JavaScript - engulfing detection, doji setup-line touches, Tradetron-style trailing stop-loss (TSL), day-of-week/monthly-expiry filters, candle-based time exits
+3. **Sweeps** every parameter combination you configure (engulf_min, doji_body_max, activation_pts, lock_profit, profit_step, trail_step - step is always 1, every value in range is tested)
 4. **Ranks** all results by net profit (or Sharpe, win rate, profit factor) and shows the **top 20**
 5. **Visualizes** the equity curve for any of the top 20 with a single click
+6. **Reproducible** - same ranges + same data always gives the same top 20 (seeded random sampling)
 
 ## Strategy logic (ported from Pine Script)
 
-The strategy combines three concepts:
+- **Engulfing pattern detection** - a bullish/bearish engulfing candle sets up a "setup line" at its midpoint
+- **Doji confirmation** - a doji touching the setup line triggers a long (CE signal) or short (PE signal) entry
+- **Tradetron-style trailing stop-loss** - once price moves `activation_pts` in your favor, a TSL locks in `lock_profit` and ratchets up in `profit_step`/`trail_step` increments
+- **Filters** - optional no-trade on Monday, no-trade on monthly expiry day, exit on monthly expiry, exit after N candles
 
-- **Engulfing pattern detection** â€” a bullish/bearish engulfing candle sets up a "setup line" at its midpoint
-- **Doji confirmation** â€” a doji touching the setup line triggers a long (CE signal, green doji) or short (PE signal, red doji) entry
-- **Tradetron-style trailing stop-loss** â€” once price moves `activation_pts` in your favor, a TSL locks in `lock_profit` and ratchets up in `profit_step`/`trail_step` increments
-- **Filters** â€” optional no-trade on Monday, no-trade on monthly expiry day, exit on monthly expiry, exit after N candles
+## Data sources
 
-## Quick start (local)
+| Chart | Source | Timeframes |
+|---|---|---|
+| NIFTY 50, SENSEX, BANK, FINNIFTY, MIDCAP, SMLCAP, IT | Yahoo Finance | 1m, 2m, 3m*, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo |
+| NIFTY 50 FUTURES (EOD) | NSE UDiFF bhavcopy archives | Daily candles only |
 
-```bash
-# No build step needed. Just serve the folder:
-cd nifty-optimizer
-python3 -m http.server 8000
-# Open http://localhost:8000
-```
+*3-min candles are built in the browser from 1-min data (Yahoo has no native 3m interval; ~1 month of history available).
 
-Or open `index.html` directly in a browser (Web Workers require a server though, so the local server is recommended).
+Note: intraday NIFTY futures candles (3-min etc.) are only available through a broker API (e.g. Angel One SmartAPI, free with an account). NSE publishes only end-of-day futures data for free.
 
-## Deploy to Cloudflare Pages
-
-This is a fully static site â€” no backend needed.
-
-### Option A: Git-connected (recommended)
-
-1. Push this repo to GitHub
-2. Go to [Cloudflare Dashboard](https://dash.cloudflare.com) â†’ **Workers & Pages** â†’ **Create** â†’ **Pages** â†’ **Connect to Git**
-3. Select your repository
-4. Build settings:
-   - **Framework preset:** None
-   - **Build command:** (leave empty)
-   - **Build output directory:** `/` (root)
-5. Click **Save and Deploy** â€” your site goes live in ~30 seconds on a `*.pages.dev` URL
-
-### Option B: Direct upload (Wrangler CLI)
+## Deploy to Cloudflare Workers
 
 ```bash
 npm install -g wrangler
-cd nifty-optimizer
-wrangler pages deploy . --project-name nifty-optimizer
+wrangler login
+npx wrangler deploy
 ```
 
-### Option C: Drag & drop
-
-1. Zip the folder contents
-2. Go to Cloudflare Pages â†’ **Create** â†’ **Direct Upload**
-3. Drag the zip file
-
-## CSV format
-
-Any CSV with OHLCV columns. The parser auto-detects headers and is flexible with column order:
-
-```
-time,open,high,low,close,volume
-2024-01-01,20000,20100,19950,20050,1000000
-2024-01-02,20050,20200,20000,20150,950000
-```
-
-Supported time formats: Unix timestamp (seconds or milliseconds), ISO date (`2024-01-01`), or `YYYY-MM-DD HH:MM`.
+Then hard-refresh the site (Ctrl+Shift+R) and check the **Build** date in the header matches today - if it does not, the deploy did not go through.
 
 ## Parameter sweep
 
-Each of the 6 numeric parameters can be configured with a **min**, **max**, and **step**:
+Each of the 6 numeric parameters is configured with a **min** and **max** (step is fixed at 1 - every value in the range is tested):
 
-| Parameter | Description | Default Range | Default Step |
-|---|---|---|---|
-| `engulf_min` | Minimum engulfing candle body size (points) | 0â€“99 | 4 |
-| `doji_body_max` | Maximum doji body size (points) | 0â€“99 | 4 |
-| `activation_pts` | Profit at which TSL activates | 0â€“99 | 5 |
-| `lock_profit` | Profit locked when TSL activates | 0â€“99 | 4 |
-| `profit_step` | Increment for extra profit calculation | 1â€“99 | 5 |
-| `trail_step` | TSL movement per profit step | 1â€“99 | 5 |
+| Parameter | Description | Default Range |
+|---|---|---|
+| `engulf_min` | Minimum engulfing candle body size (points) | 0-99 |
+| `doji_body_max` | Maximum doji body size (points) | 0-9 |
+| `activation_pts` | Profit at which TSL activates | 0-99 |
+| `lock_profit` | Profit locked when TSL activates | 0-99 |
+| `profit_step` | Increment for extra profit calculation | 1-99 |
+| `trail_step` | TSL movement per profit step | 1-99 |
 
-With defaults this tests ~131,000 combinations. Reduce step sizes or ranges for faster sweeps.
+Sweeps larger than 1,00,000 combinations are randomly sampled (1,00,000 combos, seeded - so results are still reproducible).
 
 ## Metrics shown
 
-For each of the top 20 results:
+For each of the top 20 results: **Net Profit**, **Trades**, **Win Rate %**, **Profit Factor**, **Sharpe**, **Max Drawdown**, **Avg/Trade**, and the full parameter set.
 
-- **Net Profit** â€” total points gained/lost
-- **Trades** â€”[X™\ˆÙˆÛÛ\]Y˜Y\Â‹H
-Š•Ú[ˆ˜]H	JŠˆ8 %\˜Ù[YÙHÙˆ›Ùš]X›H˜Y\Â‹H
-Š”›Ùš]˜XÝÜŠŠˆ8 %Ü›ÜÜÈ›Ùš]ÈÜ›ÜÜÈÜÜÂ‹H
-Š”Ú\œH˜][ÊŠˆ8 %š\ÚËXY\ÝY™]\›‚‹H
-Š“X^˜]ÙÝÛŠŠˆ8 %\™Ù\ÝXZË]Ë]›ÝYÚXÛ[™B‹H
-Š]™ËÕ˜YJŠˆ8 %YX[ˆ›Ùš]\ˆ˜YB‚ˆÈÈXÚÝXÚÂ‚‹H
-Š”\™H˜[š[H”ÊŠˆ8 $›Èœ˜[Y]ÛÜšÜË›È\[™[˜ÚY\Ë›ÈZ[Ý\‹H
-Š•ÙXˆÛÜšÙ\œÊŠˆ8 %Ü[Z^˜][Ûˆ[œÈÙ™ˆHXZ[ˆ™XYRHÝ^\È™\ÜÛœÚ]™B‹H
-ŠØ[˜\ÊŠˆ8 $YÚÙZYÚ\]Z]KXÝ\™HÚ\[™Â‹H
-ŠŒL	HÛY[\ÚYJŠˆ8 %[Ý\ˆ]H™]™\ˆX]™\È[Ý\ˆœ›ÝÜÙ\‚‚ˆÈÈš[HÝXÝ\™B‚˜šYK[Ü[Z^™\‹Â¸¥'8¥ 8¥ [™^š[ÈXZ[ˆRH
-S
-ÈÔÔÈ
-È\ÙÚXÊB¸¥'8¥ 8¥ œËÂ¸¥ ˆ8¥'8¥ 8¥ [™Ú[™KšœÈÈ˜XÚÝ\Ý[™È[™Ú[™H
-[™HØÜš\8¡¤ˆ”ÈÜ
-B¸¥ ˆ8¥'8¥ 8¥ Ü[Z^™\‹šœÈÈ\˜[Y]\ˆÝÙY\ÙÚXÂ¸¥ ˆ8¥'8¥ 8¥ ÜÝ‹šœÈÈÔÕˆ\œÙ\‚¸¥ ˆ8¥%8¥ 8¥ ÛÜšÙ\‹šœÈÈÙXˆÛÜšÙ\ˆ
-[œÈÝÙY\Ù™ˆXZ[ˆ™XY
-B¸¥'8¥ 8¥ Ý˜]YÞKœ[™HÈÜšYÚ[˜[[™HØÜš\H™Y™\™[˜ÙB¸¥'8¥ 8¥ Ü™Y\™XÝÈÈÛÝY›\™HYÙ\ÈÔH™Y\™XÝ¸¥%8¥ 8¥ ‘PQQK›Y˜‚ˆÈÈXÙ[œÙB‚“RU
+## Checkpoints (nothing can be deleted silently)
+
+Every push to `main` runs the **Checkpoint** GitHub Action (see `.github/workflows/checkpoint.yml`):
+
+1. **Feature guard** - it checks that every existing chart, timeframe, parameter, and endpoint is still present in the code. If a change deletes any feature, or a file gets truncated/replaced with junk, the check FAILS with a red X (repo -> Actions tab).
+2. **Restore points** - if the check passes, the version is tagged `checkpoint-<date>-<sha>` as a restore point.
+
+### How to check
+
+Go to the repo on GitHub -> **Actions** tab. A red X next to a commit means that change deleted a feature - **do not deploy it**. A green tick means all features are intact and a checkpoint tag was created.
+
+### How to restore if something was deleted
+
+From a local clone:
+
+```bash
+git fetch --tags
+git tag -l "checkpoint-*"        # list restore points (newest last)
+git checkout <newest-tag> -- .   # restore ALL files from that checkpoint
+git commit -m "Restore from checkpoint"
+git push
+```
+
+Or on GitHub.com: open the last green commit -> "Revert changes" button.
+
+## Files
+
+- `index.html` - the whole app (UI + Yahoo/NSE fetching + optimization client)
+- `js/worker.js` - self-contained Web Worker (engine + optimizer + CSV parser inlined, no imports)
+- `src/index.js` - Cloudflare Worker: `/api/yahoo` proxy + `/api/nsefut` NSE futures endpoint

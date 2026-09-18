@@ -1,0 +1,127 @@
+name: Checkpoint
+
+# Runs on every push to main. Two jobs:
+# 1. FEATURE GUARD - fails loudly if any existing feature was deleted or a file was truncated/replaced with junk.
+# 2. CHECKPOINT TAG - if (and only if) the guard passes, creates a restore-point tag for that exact version.
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  verify-and-checkpoint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Feature guard - nothing may be deleted
+        run: |
+          fail=0
+          chk() {
+            if grep -qF -- "$2" "$1" 2>/dev/null; then
+              echo "  OK    $3"
+            else
+              echo "::error file=$1::MISSING FEATURE: $3"
+              fail=1
+            fi
+          }
+          notchk() {
+            if grep -qF -- "$2" "$1" 2>/dev/null; then
+              echo "::error file=$1::FORBIDDEN CONTENT PRESENT: $3"
+              fail=1
+            else
+              echo "  OK    $3"
+            fi
+          }
+          sizechk() {
+            actual=$(wc -c < "$1" 2>/dev/null || echo 0)
+            if [ "$actual" -ge "$2" ]; then
+              echo "  OK    $1 size $actual bytes (>= $2)"
+            else
+              echo "::error file=$1::$1 is only $actual bytes (expected >= $2) - file looks truncated or replaced"
+              fail=1
+            fi
+          }
+
+          echo "== Charts in the symbol dropdown =="
+          chk index.html '"NIFTY 50": "^NSEI"' "NIFTY 50 chart"
+          chk index.html '"NIFTY 50 FUTURES (EOD)": "NIFTY_FUT"' "NIFTY 50 FUTURES chart"
+          chk index.html '"SENSEX": "^BSESN"' "SENSEX chart"
+          chk index.html '"NIFTY BANK": "^NSEBANK"' "NIFTY BANK chart"
+          chk index.html '"NIFTY FIN SERVICE (FINNIFTY)": "NIFTY_FIN_SERVICE.NS"' "FINNIFTY chart"
+          chk index.html '"NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS"' "MIDCAP 100 chart"
+          chk index.html '"NIFTY SMLCAP 250": "NIFTYSMLCAP250.NS"' "SMLCAP 250 chart"
+          chk index.html '"NIFTY IT": "^CNXIT"' "NIFTY IT chart"
+
+          echo "== Timeframes =="
+          chk index.html '"1 min":"1m"' "1-min timeframe"
+          chk index.html '"2 min":"2m"' "2-min timeframe"
+          chk index.html '"3 min":"3m"' "3-min timeframe"
+          chk index.html '"5 min":"5m"' "5-min timeframe"
+          chk index.html '"15 min":"15m"' "15-min timeframe"
+          chk index.html '"30 min":"30m"' "30-min timeframe"
+          chk index.html '"1 hour":"60m"' "1-hour timeframe"
+          chk index.html '"1 day":"1d"' "1-day timeframe"
+          chk index.html '"1 week":"1wk"' "1-week timeframe"
+          chk index.html '"1 month":"1mo"' "1-month timeframe"
+          chk index.html '"3m":["1d","5d","1mo"]' "3-min gets 1-month data"
+
+          echo "== App features =="
+          chk index.html 'resampleTo3m' "3-min candles built from 1-min data"
+          chk index.html 'fetchFuturesEOD' "NIFTY futures EOD fetch"
+          chk index.html '/api/nsefut' "futures endpoint call"
+          chk index.html 'RANGE_RULES' "interval-to-range rules"
+          chk index.html 'Run Optimization' "Run Optimization button"
+          chk index.html 'engulf_min' "engulfing parameter sweep"
+          chk index.html 'doji_body_max' "doji parameter sweep"
+          chk index.html 'activation_pts' "TSL activation parameter"
+          chk index.html 'trail_step' "TSL trail parameter"
+          chk index.html 'Build:' "visible build marker in header"
+
+          echo "== Optimizer worker (js/worker.js) =="
+          chk js/worker.js 'mulberry32' "seeded PRNG (reproducible results)"
+          chk js/worker.js 'SAMPLE_LIMIT' "sampling cap for huge sweeps"
+          chk js/worker.js 'parseCSV' "CSV parser inlined in worker"
+          chk js/worker.js 'runBacktest' "backtest engine inlined in worker"
+          chk js/worker.js 'optimizeParams' "optimizer inlined in worker"
+          notchk js/worker.js 'importScripts' "worker must NOT use importScripts (it breaks)"
+
+          echo "== Cloudflare Worker (src/index.js) =="
+          chk src/index.js "'/api/yahoo'" "Yahoo Finance proxy endpoint"
+          chk src/index.js "'/api/nsefut'" "NSE futures endpoint"
+          chk src/index.js 'BhavCopy_NSE_FO' "NSE bhavcopy download"
+          chk src/index.js 'extractFrontMonthCsv' "front-month futures extraction"
+
+          echo "== File sizes (detect truncation / junk commits) =="
+          sizechk index.html 20000
+          sizechk js/worker.js 15000
+          sizechk src/index.js 6000
+
+          echo "== Forbidden junk =="
+          notchk index.html 'PLACEHOLDER' "no PLACEHOLDER text in index.html"
+          notchk js/worker.js 'PLACEHOLDER' "no PLACEHOLDER text in worker.js"
+          notchk src/index.js 'PLACEHOLDER' "no PLACEHOLDER text in src/index.js"
+
+          if [ "$fail" -ne 0 ]; then
+            echo ""
+            echo "============================================================"
+            echo "FEATURE CHECK FAILED - this change DELETED an existing"
+            echo "feature or replaced a file with junk. DO NOT DEPLOY IT."
+            echo "Restore the last good version (see README: Checkpoints)"
+            echo "============================================================"
+            exit 1
+          fi
+          echo ""
+          echo "All features present. Nothing was deleted."
+
+      - name: Create checkpoint tag (restore point)
+        run: |
+          git config user.name "checkpoint-bot"
+          git config user.email "actions@github.com"
+          TAG="checkpoint-$(date -u +%Y%m%d-%H%M%S)-${GITHUB_SHA::7}"
+          git tag "$TAG"
+          git push origin "$TAG"
+          echo "Restore point created: $TAG"
