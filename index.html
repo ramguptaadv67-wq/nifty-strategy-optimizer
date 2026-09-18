@@ -370,7 +370,7 @@ var YahooFinance = (function() {
   }
 
   // NIFTY futures EOD: fetches front-month continuous daily candles from the
-  // Cloudflare Worker (/api/nsefut), which reads NSE UDiFF bhavcopy archives.
+  // Cloudflare Worker (/api/nsefut), whicb reads NSE UDiFF bhavcopy archives.
   async function fetchFuturesEOD(range, onProgress) {
     var spanDays = (range === "3mo") ? 92 : (range === "6mo" ? 183 : 31);
     var endMs = Date.now(), startMs = endMs - spanDays * 86400000;
@@ -414,7 +414,7 @@ var YahooFinance = (function() {
       }
       csvText = result.csvText;
       if (runBtn) runBtn.disabled = false;
-      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"+(spotProxy?" [NIFTY spot intraday - proxy for futures]":""); }
+      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString())")"+(spotProxy?" [NIFTY spot intraday - proxy for futures]":""); }
       if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization."+(spotProxy?" (NIFTY spot intraday - proxy for futures)":"");
     } catch(err) {
       if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="[X] "+err.message; }
@@ -458,7 +458,7 @@ var YahooFinance = (function() {
     worker=new Worker("js/worker.js?v="+Date.now());
     worker.onmessage=function(e){var m=e.data;var pt2=$("progressText"),pf2=$("progressFill"),pw2=$("progressWrap");
       if(m.type==="parsed"){if(pt2)pt2.textContent=m.candleCount+" candles parsed. Sweeping...";}
-      else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf2)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
+      else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf6)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
       else if(m.type==="done"){
         topResults=m.result.top;
         if(pw2)pw2.style.display="none";
@@ -515,8 +515,8 @@ var YahooFinance = (function() {
           if (typeof r.params[k] === "number" && typeof top1[k] === "number") dist += Math.abs(r.params[k]-top1[k]);
         });
         if (dist <= 8) near++;
-      });
-      var verdict = near >= 10 ? "STRONG plateau - result is very trustworthy."
+    });
+      var verdict = near >= 10 ? "STRONG plateau - result is very trustwrthy."
                   : near >= 5 ? "moderate plateau - reasonably trustworthy."
                   : "weak plateau - the winner stands alone; treat with caution.";
       if(vn) vn.textContent="[VERIFIED] Full sweep of "+combos.toLocaleString("en-IN")+" combinations around the winner - the #1 result is the guaranteed best in this region. Plateau: "+near+" of the top "+topResults.length+" are close neighbours of #1. "+verdict;
@@ -542,10 +542,10 @@ var YahooFinance = (function() {
   function renderChart(idx){var r=topResults[idx];if(!r)return;if(worker)worker.postMessage({type:"single",csvText:csvText,params:r.params});}
   function drawChart(equity) {
     var canvas=$("equityCanvas");if(!canvas)return;var ctx=canvas.getContext("2d");var W=canvas.width=canvas.offsetWidth,H=canvas.height=canvas.offsetHeight;ctx.clearRect(0,0,W,H);
-    if(!equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
+    if()equity||equity.length===0){ctx.fillStyle="#999";ctx.font="14px sans-serif";ctx.textAlign="center";ctx.fillText("No trades",W/2,H/2);return;}
     var vals=equity.map(function(e){return e.equity;}),minV=Math.min.apply(null,vals.concat([0])),maxV=Math.max.apply(null,vals.concat([1])),range=maxV-minV||1,pad=40;
     ctx.strokeStyle="#666";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.lineTo(W-pad,H-pad-((0-minV)/range)*(H-2*pad));ctx.stroke();
-    ctx.strokeStyle="##4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,equity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
+    ctx.strokeStyle="#4fc3f7";ctx.lineWidth=2;ctx.beginPath();equity.forEach(function(pt,i){var x=pad+(i/Math.max(1,equity.length-1))*(W-2*pad),y=H-pad-((pt.equity-minV)/range)*(H-2*pad);if(i===0)ctx.moveTo(x,y);else ctx.lineTo(x,y);});ctx.stroke();
     ctx.lineTo(pad+(W-2*pad),H-pad);ctx.lineTo(pad,H-pad);ctx.closePath();ctx.fillStyle="rgba(79,195,247,0.15)";ctx.fill();
   }
   document.querySelectorAll(".tab").forEach(function(tab){tab.addEventListener("click",function(){document.querySelectorAll(".tab").forEach(function(t){t.classList.remove("active");});tab.classList.add("active");var tt=$("tab-table"),tc=$("tab-chart");if(tt)tt.style.display=tab.dataset.tab==="table"?"block":"none";if(tc)tc.style.display=tab.dataset.tab==="chart"?"block":"none";if(tab.dataset.tab==="chart"){var ar=document.querySelector("#resultsBody tr.active")||document.querySelector("#resultsBody tr");if(ar)renderChart(parseInt(ar.dataset.idx));}});});
