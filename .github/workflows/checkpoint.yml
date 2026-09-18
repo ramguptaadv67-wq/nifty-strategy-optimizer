@@ -87,7 +87,7 @@ jobs:
           chk js/worker.js 'parseCSV' "CSV parser inlined in worker"
           chk js/worker.js 'runBacktest' "backtest engine inlined in worker"
           chk js/worker.js 'optimizeParams' "optimizer inlined in worker"
-          notchk js/worker.js 'importScripts' "worker must NOT use importScripts (it breaks)"
+          notchk js/worker.js 'importScripts(' "worker must NOT call importScripts() (it breaks)"
 
           echo "== Cloudflare Worker (src/index.js) =="
           chk src/index.js "'/api/yahoo'" "Yahoo Finance proxy endpoint"
