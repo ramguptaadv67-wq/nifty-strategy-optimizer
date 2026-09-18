@@ -164,21 +164,59 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 // ===== YAHOO FINANCE (inlined from yahoo.js) =====
 var YahooFinance = (function() {
   var SYMBOLS = { "NIFTY 50": "^NSEI", "SENSEX": "^BSESN" };
-  var INTERVALS = { "1 min":"1m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
-  var RANGES = ["1mo","3mo","6mo","1y","2y","5y","10y","max"];
+  var INTERVALS = { "1 min":"1m","2 min":"2m","3 min":"3m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
+  var RANGES = ["1d","5d","1mo","3mo","6mo","1y","2y","5y","10y","max"];
+  var RANGE_LABELS = { "1d":"1 day","5d":"5 days","1mo":"1 month","3mo":"3 months","6mo":"6 months","1y":"1 year","2y":"2 years","5y":"5 years","10y":"10 years","max":"Max (10 years)" };
+  var RANGE_RULES = {
+    "1m":["1d","5d"],
+    "2m":["1d","5d","1mo"],
+    "3m":["1d","5d"],
+    "5m":["1d","5d","1mo"],
+    "15m":["1d","5d","1mo"],
+    "30m":["1d","5d","1mo"],
+    "60m":["1d","5d","1mo","3mo","6mo","1y","2y"],
+    "1d":["1mo","3mo","6mo","1y","2y","5y","10y","max"],
+    "1wk":["1mo","3mo","6mo","1y","2y","5y","10y","max"],
+    "1mo":["1mo","3mo","6mo","1y","2y","5y","10y","max"]
+  };
+  function rangesFor(interval) { return RANGE_RULES[interval] || RANGE_RULES["1d"]; }
   var CORS_PROXIES = [
     function(u){return "https://corsproxy.io/?url="+encodeURIComponent(u)},
     function(u){return "https://api.allorigins.win/raw?url="+encodeURIComponent(u)},
     function(u){return "https://api.codetabs.com/v1/proxy?quest="+encodeURIComponent(u)}
   ];
 
+  // Aggregate 1-min candles into 3-min candles (Yahoo has no native 3m interval).
+  // Buckets are aligned to absolute 3-minute boundaries; NSE 09:15 IST open
+  // (03:45 UTC) falls exactly on a boundary so sessions stay clean.
+  function resampleTo3m(candles) {
+    var out = [], cur = null, curBucket = -1;
+    for (var i = 0; i < candles.length; i++) {
+      var c = candles[i];
+      var bucket = Math.floor(c.time / 180000);
+      if (bucket !== curBucket) {
+        if (cur) out.push(cur);
+        cur = { time: bucket * 180000, open: c.open, high: c.high, low: c.low, close: c.close, volume: c.volume || 0 };
+        curBucket = bucket;
+      } else {
+        if (c.high > cur.high) cur.high = c.high;
+        if (c.low < cur.low) cur.low = c.low;
+        cur.close = c.close;
+        cur.volume += (c.volume || 0);
+      }
+    }
+    if (cur) out.push(cur);
+    return out;
+  }
+
   async function fetchCandles(symbol, interval, range, onProgress) {
-    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?interval="+interval+"&range="+range;
+    var fetchInterval = (interval === "3m") ? "1m" : interval;
+    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?interval="+fetchInterval+"&range="+range;
     var data = null, lastError = null;
 
     if (onProgress) onProgress("Fetching from Yahoo Finance...");
     try {
-      var fnUrl = "/api/yahoo?symbol="+encodeURIComponent(symbol)+"&interval="+interval+"&range="+range;
+      var fnUrl = "/api/yahoo?symbol="+encodeURIComponent(symbol)+"&interval="+fetchInterval+"&range="+range;
       var resp = await fetch(fnUrl);
       if (resp.ok) data = await resp.json();
     } catch(e) { lastError = e; }
@@ -203,15 +241,19 @@ var YahooFinance = (function() {
       if (q.open[i]==null||q.high[i]==null||q.low[i]==null||q.close[i]==null) continue;
       candles.push({time:ts[i]*1000,open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i],volume:q.volume?q.volume[i]||0:0});
     }
+    if (interval === "3m") {
+      if (onProgress) onProgress("Aggregating into 3-minute candles...");
+      candles = resampleTo3m(candles);
+    }
     var csvText = "Date,Open,High,Low,Close,Volume\n";
     for (var c of candles) {
       var d = new Date(c.time);
-      csvText += d.toISOString().slice(0,10)+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
+      csvText += d.toISOString()+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
     }
     return {candles:candles, csvText:csvText, meta:result.meta||{}};
   }
 
-  return { fetchCandles:fetchCandles, SYMBOLS:SYMBOLS, INTERVALS:INTERVALS, RANGES:RANGES };
+  return { fetchCandles:fetchCandles, SYMBOLS:SYMBOLS, INTERVALS:INTERVALS, RANGES:RANGES, RANGE_LABELS:RANGE_LABELS, rangesFor:rangesFor };
 })();
 </script>
 
@@ -230,12 +272,30 @@ var YahooFinance = (function() {
       var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooSymbol.appendChild(o);
     });
     Object.entries(YahooFinance.INTERVALS).forEach(function(e) {
-      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0]; yahooInterval.appendChild(o);
+      var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0];
+      if (e[1]==="1d") o.selected=true;
+      yahooInterval.appendChild(o);
     });
-    YahooFinance.RANGES.forEach(function(r) {
-      var o = document.createElement("option"); o.value=r; o.textContent=r==="max"?"Max (10 years)":r;
-      if (r==="1y") o.selected=true; yahooRange.appendChild(o);
+    populateRanges("1d");
+    yahooInterval.addEventListener("change", function() { populateRanges(yahooInterval.value); });
+  }
+
+  function populateRanges(interval) {
+    if (!yahooRange) return;
+    var prev = yahooRange.value;
+    yahooRange.innerHTML = "";
+    var valid = YahooFinance.rangesFor(interval);
+    valid.forEach(function(r) {
+      var o = document.createElement("option"); o.value=r;
+      o.textContent = YahooFinance.RANGE_LABELS[r] || r;
+      yahooRange.appendChild(o);
     });
+    if (valid.indexOf(prev) >= 0) { yahooRange.value = prev; return; }
+    if (interval === "1d" || interval === "1wk" || interval === "1mo") {
+      if (valid.indexOf("1y") >= 0) yahooRange.value = "1y";
+    } else if (valid.indexOf("1mo") >= 0) {
+      yahooRange.value = "1mo";
+    }
   }
 
   if (yahooBtn) yahooBtn.addEventListener("click", async function() {
