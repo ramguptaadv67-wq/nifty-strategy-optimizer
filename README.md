@@ -25,11 +25,11 @@ A faithful JavaScript port of the Pine Script v5 `strategy("NIFTY — webhook()"
 | Chart | Source | Timeframes |
 |---|---|---|
 | NIFTY 50, SENSEX, BANK, FINNIFTY, MIDCAP, SMLCAP, IT | Yahoo Finance | 1m, 2m, 3m*, 5m, 15m, 30m, 1h, 1d, 1wk, 1mo |
-| NIFTY 50 FUTURES (EOD) | NSE UDiFF bhavcopy archives | Daily candles only |
+| NIFTY 50 FUTURES | Daily: NSE UDiFF bhavcopy (real futures prices). 3m\*/5m\*: NIFTY spot intraday (closest free proxy) | 3m\*, 5m\*, 1d |
 
 *3-min candles are built in the browser from 1-min data (Yahoo has no native 3m interval; ~1 month of history available).
 
-Note: intraday NIFTY futures candles (3-min etc.) are only available through a broker API (e.g. Angel One SmartAPI, free with an account). NSE publishes only end-of-day futures data for free.
+Note: intraday NIFTY futures candles are only available through a broker API (e.g. Angel One SmartAPI, free with an account). NSE publishes only end-of-day futures data for free - so the 3m\*/5m\* options on the futures chart use NIFTY spot intraday as a close proxy (futures follows spot within a small premium).
 
 ## Deploy to Cloudflare Workers
 

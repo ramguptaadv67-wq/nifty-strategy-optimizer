@@ -75,7 +75,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 <body>
 <header>
 <h1> NIFTY Strategy Optimizer</h1>
-<p>Fetch live data - Sweep parameter combinations - Get top 20 results &nbsp;|&nbsp; Build: 2026-09-18-D</p>
+<p>Fetch live data - Sweep parameter combinations - Get top 20 results &nbsp;|&nbsp; Build: 2026-09-18-E</p>
 </header>
 <div class="container">
 
@@ -313,7 +313,7 @@ var YahooFinance = (function() {
     if (!yahooInterval) return;
     var prev = yahooInterval.value;
     yahooInterval.innerHTML = "";
-    var list = isFut() ? [["1 day","1d"]] : Object.entries(YahooFinance.INTERVALS);
+    var list = isFut() ? [["1 day","1d"],["3 min*","3m"],["5 min*","5m"]] : Object.entries(YahooFinance.INTERVALS);
     var found = false;
     list.forEach(function(e) {
       var o = document.createElement("option"); o.value=e[1]; o.textContent=e[0];
@@ -327,16 +327,22 @@ var YahooFinance = (function() {
     var prev = yahooRange.value;
     yahooRange.innerHTML = "";
     if (isFut()) {
-      ["1mo","3mo","6mo"].forEach(function(r) {
+      var iv = yahooInterval ? yahooInterval.value : "1d";
+      var rlist = (iv === "3m" || iv === "5m") ? ["1d","5d","1mo"] : ["1mo","3mo","6mo"];
+      rlist.forEach(function(r) {
         var o = document.createElement("option"); o.value=r;
-        o.textContent = r==="1mo" ? "1 month" : (r==="3mo" ? "3 months" : "6 months");
+        o.textContent = YahooFinance.RANGE_LABELS[r] || r;
         yahooRange.appendChild(o);
       });
-      yahooRange.value = (prev==="3mo" || prev==="6mo") ? prev : "1mo";
-      if (candleCount) candleCount.textContent = "Futures data is end-of-day (daily candles) only. Select NIFTY 50 (or another index) for 3-min / 5-min intraday.";
+      if (rlist.indexOf(prev) >= 0) yahooRange.value = prev;
+      else if (rlist.indexOf("1mo") >= 0) yahooRange.value = "1mo";
+      if (candleCount) {
+        if (iv === "3m" || iv === "5m") candleCount.textContent = "* 3-min / 5-min on the futures chart use NIFTY SPOT intraday data (free futures intraday does not exist - futures follows spot within a small premium). 1 day = real futures prices from NSE.";
+        else candleCount.textContent = "Futures daily candles are real futures prices from NSE. For intraday, pick 3 min* / 5 min* (NIFTY spot proxy - closest free equivalent).";
+      }
       return;
     }
-    if (candleCount && candleCount.textContent.indexOf("Futures data is") === 0) candleCount.textContent = "No data fetched yet.";
+    if (candleCount && (candleCount.textContent.indexOf("Futures") === 0 || candleCount.textContent.indexOf("* 3-min") === 0)) candleCount.textContent = "No data fetched yet.";
     var interval = yahooInterval ? yahooInterval.value : "1d";
     var valid = YahooFinance.rangesFor(interval);
     valid.forEach(function(r) {
@@ -387,13 +393,18 @@ var YahooFinance = (function() {
     yahooBtn.disabled = true; yahooBtn.textContent = "Fetching...";
     if (yahooStatus) { yahooStatus.style.display="block"; yahooStatus.className="yahoo-status loading"; yahooStatus.textContent="Connecting to Yahoo Finance..."; }
     try {
-      var result;
-      if (symbol === "NIFTY_FUT") result = await fetchFuturesEOD(range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
-      else result = await YahooFinance.fetchCandles(symbol, interval, range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
+      var result, spotProxy = false;
+      if (symbol === "NIFTY_FUT" && interval !== "3m" && interval !== "5m") {
+        result = await fetchFuturesEOD(range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
+      } else {
+        var fetchSym = symbol;
+        if (symbol === "NIFTY_FUT") { fetchSym = "^NSEI"; spotProxy = true; }
+        result = await YahooFinance.fetchCandles(fetchSym, interval, range, function(msg) { if(yahooStatus) yahooStatus.textContent=msg; });
+      }
       csvText = result.csvText;
       if (runBtn) runBtn.disabled = false;
-      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"; }
-      if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization.";
+      if (yahooStatus) { yahooStatus.className="yahoo-status success"; yahooStatus.textContent="[OK] Fetched "+result.candles.length+" candles ("+new Date(result.candles[0].time).toLocaleDateString()+" -> "+new Date(result.candles[result.candles.length-1].time).toLocaleDateString()+")"+(spotProxy?" [NIFTY spot intraday - proxy for futures]":""); }
+      if (candleCount) candleCount.textContent = result.candles.length+" candles ready for optimization."+(spotProxy?" (NIFTY spot intraday - proxy for futures)":"");
     } catch(err) {
       if (yahooStatus) { yahooStatus.className="yahoo-status error"; yahooStatus.textContent="[X] "+err.message; }
     } finally {
@@ -432,7 +443,7 @@ var YahooFinance = (function() {
       else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf2)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
       else if(m.type==="done"){topResults=m.result.top;if(pw2)pw2.style.display="none";runBtn.disabled=false;renderResults(m.result);}
       else if(m.type=="error"){if(pt2)pt2.textContent="Error: "+m.message;runBtn.disabled=false;}
-      else if(m.type=="singleDone"){drawChart(m.result.equity);}
+      else if(m.type==="singleDone"){drawChart(m.result.equity);}
     };
     worker.onerror=function(e){if(pt)pt.textContent="Worker Error: "+(e.message||"unknown");runBtn.disabled=false;};
     worker.postMessage({type:"optimize",csvText:csvText,ranges:r.ranges,fixedParams:fp,steps:steps,sortMetric:sm});

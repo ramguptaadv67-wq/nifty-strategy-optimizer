@@ -80,6 +80,9 @@ jobs:
           chk index.html 'activation_pts' "TSL activation parameter"
           chk index.html 'trail_step' "TSL trail parameter"
           chk index.html 'Build:' "visible build marker in header"
+          chk index.html '"3 min*"' "3-min option on futures chart (spot proxy)"
+          chk index.html '"5 min*"' "5-min option on futures chart (spot proxy)"
+          chk index.html 'spotProxy' "spot-proxy labeling for futures intraday"
 
           echo "== Optimizer worker (js/worker.js) =="
           chk js/worker.js 'mulberry32' "seeded PRNG (reproducible results)"
