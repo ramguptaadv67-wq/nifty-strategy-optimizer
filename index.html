@@ -163,7 +163,7 @@ header p{font-size:.82rem;color:var(--text-dim);margin-top:4px}
 <script>
 // ===== YAHOO FINANCE (inlined from yahoo.js) =====
 var YahooFinance = (function() {
-  var SYMBOLS = { "NIFTY 50 FUTURES (EOD)": "NIFTY_FUT", "NIFTY 50 (spot)": "^NSEI" };
+  var SYMBOLS = { "NIFTY 50 FUTURES (EOD)": "NIFTY_FUT", "NIFTY 50": "^NSEI", "SENSEX": "^BSESN", "NIFTY BANK": "^NSEBANK", "NIFTY FIN SERVICE (FINNIFTY)": "NIFTY_FIN_SERVICE.NS", "NIFTY MIDCAP 100": "NIFTY_MIDCAP_100.NS", "NIFTY SMLCAP 250": "NIFTYSMLCAP250.NS", "NIFTY IT": "^CNXIT" };
   var INTERVALS = { "1 min":"1m","2 min":"2m","3 min":"3m","5 min":"5m","15 min":"15m","30 min":"30m","1 hour":"60m","1 day":"1d","1 week":"1wk","1 month":"1mo" };
   var RANGES = ["1d","5d","1mo","3mo","6mo","1y","2y","5y","10y","max"];
   var RANGE_LABELS = { "1d":"1 day","5d":"5 days","1mo":"1 month","3mo":"3 months","6mo":"6 months","1y":"1 year","2y":"2 years","5y":"5 years","10y":"10 years","max":"Max (10 years)" };
@@ -428,7 +428,7 @@ var YahooFinance = (function() {
     worker.onmessage=function(e){var m=e.data;var pt2=$("progressText"),pf2=$("progressFill"),pw2=$("progressWrap");
       if(m.type==="parsed"){if(pt2)pt2.textContent=m.candleCount+" candles parsed. Sweeping...";}
       else if(m.type==="progress"){var p=(m.done/m.total)*100;if(pf2)pf2.style.width=p+"%";if(pt2)pt2.textContent=m.done+" / "+m.total+" ("+p.toFixed(1)+"%)";}
-      else if(m.type=="done"){topResults=m.result.top;if(pw2)pw2.style.display="none";runBtn.disabled=false;renderResults(m.result);}
+      else if(m.type==="done"){topResults=m.result.top;if(pw2)pw2.style.display="none";runBtn.disabled=false;renderResults(m.result);}
       else if(m.type=="error"){if(pt2)pt2.textContent="Error: "+m.message;runBtn.disabled=false;}
       else if(m.type=="singleDone"){drawChart(m.result.equity);}
     };
