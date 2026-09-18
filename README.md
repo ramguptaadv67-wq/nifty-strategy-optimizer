@@ -35,7 +35,6 @@ Note: intraday NIFTY futures candles are only available through a broker API (e.
 
 ```bash
 npm install -g wrangler
-wrangler login
 npx wrangler deploy
 ```
 
@@ -54,7 +53,12 @@ Each of the 6 numeric parameters is configured with a **min** and **max** (step 
 | `profit_step` | Increment for extra profit calculation | 1-99 |
 | `trail_step` | TSL movement per profit step | 1-99 |
 
-Sweeps larger than 1,00,000 combinations are randomly sampled (1,00,000 combos, seeded - so results are still reproducible).
+For sweeps larger than 1,00,000 combinations there are two methods (pick under the ranges):
+
+- **Smart Evolution (default)** - a genetic algorithm that breeds the best parameter sets generation by generation. ~4,500 tests, converges on the best regions, seeded so results are 100% reproducible, and typically finds *better* results than blind sampling.
+- **Random Sampling** - the old behaviour: 1,00,000 random combos (seeded, reproducible).
+
+After any optimization you can click **Verify Top Result** - the app runs a *full sweep* of the neighbourhood around the #1 result (every combination tested, guaranteed best in that region) and tells you whether the winner sits on a plateau (many neighbours also perform well = trustworthy) or stands alone (= treat with caution).
 
 ## Metrics shown
 
