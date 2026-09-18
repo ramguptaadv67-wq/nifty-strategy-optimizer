@@ -377,7 +377,7 @@
     }
   };
 
-  function optimizeParams(candles, ranges, fixedParams, steps, onProgress, sortMetric) {
+  function optimizeParams(candles, ranges, fixedParams, steps, onProgress, sortMetric, method) {
     var metric = sortMetric || "netProfit";
     var isDesc = (metric !== "maxDrawdown");
 
@@ -416,7 +416,73 @@
 
     if (onProgress) onProgress(0, targetCount);
 
-    if (useSampling) {
+    var useGa = (method === "ga") && useSampling;
+
+    if (useGa) {
+      // ===== SMART EVOLUTION (genetic algorithm) =====
+      // Instead of blind random sampling, breed parameter sets: keep the
+      // best performers, mix their genes, mutate slightly, repeat. Finds
+      // near-optimal regions with ~5,000 tests instead of 100,000 random ones.
+      // Seeded PRNG -> fully reproducible, same result every run.
+      var POP = 80, GENS = 60, ELITE = 6, MUT_RATE = 0.18, TOUR = 3;
+      var budget = POP + (POP - ELITE) * GENS;
+      var gaRng = makeRng(42);
+
+      function gaRandVal(p) { return valueLists[p][Math.floor(gaRng() * valueLists[p].length)]; }
+
+      function gaEvaluate(indiv) {
+        var fp = {};
+        var bpKeys = Object.keys(baseParams);
+        for (var b = 0; b < bpKeys.length; b++) fp[bpKeys[b]] = baseParams[bpKeys[b]];
+        for (var q = 0; q < numParams; q++) fp[keys[q]] = indiv.genes[q];
+        if (fp.profit_step <= 0 || fp.trail_step <= 0) return -Infinity;
+        var res = global.runBacktest(candles, fp);
+        tested++;
+        var mv = res.metrics[metric];
+        if (isFinite(mv)) {
+          topBuffer.tryInsert({ params: fp, metrics: res.metrics, trades: res.trades.length }, mv);
+        }
+        indiv.params = fp;
+        return isFinite(mv) ? mv : -Infinity;
+      }
+
+      function gaTournament(pop) {
+        var best = pop[Math.floor(gaRng() * pop.length)];
+        for (var t = 1; t < TOUR; t++) {
+          var c = pop[Math.floor(gaRng() * pop.length)];
+          if (c.fitness > best.fitness) best = c;
+        }
+        return best;
+      }
+
+      if (onProgress) onProgress(0, budget);
+
+      var population = [];
+      for (var i0 = 0; i0 < POP; i0++) {
+        var ind = { genes: [], fitness: -Infinity };
+        for (var g0 = 0; g0 < numParams; g0++) ind.genes[g0] = gaRandVal(g0);
+        population.push(ind);
+      }
+      for (var i1 = 0; i1 < POP; i1++) population[i1].fitness = gaEvaluate(population[i1]);
+
+      for (var gen = 0; gen < GENS; gen++) {
+        population.sort(function (a, b) { return b.fitness - a.fitness; });
+        var next = population.slice(0, ELITE);
+        while (next.length < POP) {
+          var pa = gaTournament(population), pb = gaTournament(population);
+          var child = { genes: [], fitness: -Infinity };
+          for (var g1 = 0; g1 < numParams; g1++) {
+            child.genes[g1] = (gaRng() < 0.5) ? pa.genes[g1] : pb.genes[g1];
+            if (gaRng() < MUT_RATE) child.genes[g1] = gaRandVal(g1);
+          }
+          next.push(child);
+        }
+        for (var e1 = ELITE; e1 < POP; e1++) next[e1].fitness = gaEvaluate(next[e1]);
+        population = next;
+        if (onProgress && (gen % 5 === 0 || gen === GENS - 1)) onProgress(tested, budget);
+      }
+      population.sort(function (a, b) { return b.fitness - a.fitness; });
+    } else if (useSampling) {
       var rng = makeRng(42);
       var seen = {};
       var attempts = 0;
@@ -614,7 +680,7 @@ self.onmessage = function (e) {
           lastProgressTime = now;
           self.postMessage({ type: "progress", done: done, total: total });
         }
-      }, msg.sortMetric);
+      }, msg.sortMetric, msg.method);
 
       self.postMessage({ type: "done", result: result });
     } catch (err) {

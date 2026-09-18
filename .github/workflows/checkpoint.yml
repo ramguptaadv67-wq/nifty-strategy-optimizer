@@ -83,6 +83,11 @@ jobs:
           chk index.html '"3 min*"' "3-min option on futures chart (spot proxy)"
           chk index.html '"5 min*"' "5-min option on futures chart (spot proxy)"
           chk index.html 'spotProxy' "spot-proxy labeling for futures intraday"
+          chk index.html 'Smart Evolution' "Smart Evolution optimization method"
+          chk index.html 'verifyBtn' "Verify Top Result button"
+          chk index.html 'launchOptimize' "shared optimizer launcher"
+          chk js/worker.js 'useGa' "genetic algorithm in worker"
+          chk js/worker.js 'gaTournament' "GA tournament selection"
 
           echo "== Optimizer worker (js/worker.js) =="
           chk js/worker.js 'mulberry32' "seeded PRNG (reproducible results)"
