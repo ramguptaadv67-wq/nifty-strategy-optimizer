@@ -7,7 +7,15 @@ export default {
       const symbol = url.searchParams.get('symbol') || '^NSEI';
       const interval = url.searchParams.get('interval') || '1d';
       const range = url.searchParams.get('range') || '1y';
-      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}&range=${range}`;
+      const period1 = url.searchParams.get('period1');
+      const period2 = url.searchParams.get('period2');
+      let yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?interval=${interval}`;
+      if (period1 && period2) {
+        // Exact epoch window (used for chunked 1-min fetches to build 3-min candles)
+        yahooUrl += `&period1=${period1}&period2=${period2}`;
+      } else {
+        yahooUrl += `&range=${range}`;
+      }
 
       try {
         const resp = await fetch(yahooUrl, {

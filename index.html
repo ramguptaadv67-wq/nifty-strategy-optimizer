@@ -170,7 +170,7 @@ var YahooFinance = (function() {
   var RANGE_RULES = {
     "1m":["1d","5d"],
     "2m":["1d","5d","1mo"],
-    "3m":["1d","5d"],
+    "3m":["1d","5d","1mo"],
     "5m":["1d","5d","1mo"],
     "15m":["1d","5d","1mo"],
     "30m":["1d","5d","1mo"],
@@ -209,48 +209,78 @@ var YahooFinance = (function() {
     return out;
   }
 
-  async function fetchCandles(symbol, interval, range, onProgress) {
-    var fetchInterval = (interval === "3m") ? "1m" : interval;
-    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?interval="+fetchInterval+"&range="+range;
-    var data = null, lastError = null;
-
-    if (onProgress) onProgress("Fetching from Yahoo Finance...");
-    try {
-      var fnUrl = "/api/yahoo?symbol="+encodeURIComponent(symbol)+"&interval="+fetchInterval+"&range="+range;
-      var resp = await fetch(fnUrl);
-      if (resp.ok) data = await resp.json();
-    } catch(e) { lastError = e; }
-
-    if (!data) {
-      for (var i=0; i<CORS_PROXIES.length; i++) {
-        if (onProgress) onProgress("Trying proxy "+(i+1)+"/"+CORS_PROXIES.length+"...");
-        try {
-          var resp2 = await fetch(CORS_PROXIES[i](yahooUrl));
-          if (resp2.ok) { data = JSON.parse(await resp2.text()); if (data&&data.chart&&data.chart.result) break; data=null; }
-        } catch(e) { lastError=e; }
-      }
-    }
-
-    if (!data||!data.chart||!data.chart.result) throw new Error("Could not fetch from Yahoo Finance. "+(lastError?"("+lastError.message+")":""));
-
-    var result = data.chart.result[0];
+  function extractCandles(result) {
     var ts = result.timestamp||[];
     var q = result.indicators.quote[0];
-    var candles = [];
+    var out = [];
     for (var i=0; i<ts.length; i++) {
       if (q.open[i]==null||q.high[i]==null||q.low[i]==null||q.close[i]==null) continue;
-      candles.push({time:ts[i]*1000,open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i],volume:q.volume?q.volume[i]||0:0});
+      out.push({time:ts[i]*1000,open:q.open[i],high:q.high[i],low:q.low[i],close:q.close[i],volume:q.volume?q.volume[i]||0:0});
     }
+    return out;
+  }
+
+  async function fetchYahoo(symbol, query, onProgress) {
+    var yahooUrl = "https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(symbol)+"?"+query;
+    var data = null, lastError = null;
+    try {
+      var resp = await fetch("/api/yahoo?symbol="+encodeURIComponent(symbol)+"&"+query);
+      if (resp.ok) { data = await resp.json(); if (data&&data.chart&&data.chart.result) return data; data=null; }
+    } catch(e) { lastError = e; }
+    for (var i=0; i<CORS_PROXIES.length; i++) {
+      if (onProgress) onProgress("Trying proxy "+(i+1)+"/"+CORS_PROXIES.length+"...");
+      try {
+        var resp2 = await fetch(CORS_PROXIES[i](yahooUrl));
+        if (resp2.ok) { data = JSON.parse(await resp2.text()); if (data&&data.chart&&data.chart.result) return data; }
+      } catch(e) { lastError=e; }
+    }
+    throw new Error("Could not fetch from Yahoo Finance. "+(lastError?"("+lastError.message+")":""));
+  }
+
+  async function fetchCandles(symbol, interval, range, onProgress) {
+    var candles = [], meta = {};
+
     if (interval === "3m") {
+      // 3-min candles are built from 1-min data (Yahoo has no 3m interval).
+      // Yahoo serves 1m data for roughly the last 30 days, max ~7 days per
+      // request, so the window is fetched in 6-day chunks.
+      var spanDays = (range === "1mo") ? 30 : (range === "5d" ? 5 : 1);
+      var nowSec = Math.floor(Date.now()/1000);
+      var startSec = nowSec - spanDays * 86400;
+      var nChunks = Math.max(1, Math.ceil(spanDays / 6));
+      var failed = 0;
+      for (var ch = 0; ch < nChunks; ch++) {
+        var p1 = startSec + ch * 6 * 86400;
+        var p2 = Math.min(p1 + 6 * 86400, nowSec);
+        if (onProgress) onProgress("Fetching 1-min data ("+(ch+1)+"/"+nChunks+")...");
+        try {
+          var d = await fetchYahoo(symbol, "interval=1m&period1="+p1+"&period2="+p2, onProgress);
+          candles = candles.concat(extractCandles(d.chart.result[0]));
+          if (d.chart.result[0].meta) meta = d.chart.result[0].meta;
+        } catch(e) { failed++; }
+      }
+      if (candles.length === 0) throw new Error("Could not fetch 1-min data for 3-min candles.");
+      if (onProgress && failed > 0) onProgress("Note: "+failed+" chunk(s) skipped due to fetch errors.");
+      candles.sort(function(a,b){ return a.time - b.time; });
+      var dedup = [];
+      for (var i=0;i<candles.length;i++) if (i===0 || candles[i].time !== candles[i-1].time) dedup.push(candles[i]);
+      candles = dedup;
       if (onProgress) onProgress("Aggregating into 3-minute candles...");
       candles = resampleTo3m(candles);
+    } else {
+      if (onProgress) onProgress("Fetching from Yahoo Finance...");
+      var d2 = await fetchYahoo(symbol, "interval="+interval+"&range="+range, onProgress);
+      candles = extractCandles(d2.chart.result[0]);
+      meta = d2.chart.result[0].meta || {};
     }
+
+    if (candles.length === 0) throw new Error("No candles returned for this interval/range.");
     var csvText = "Date,Open,High,Low,Close,Volume\n";
     for (var c of candles) {
-      var d = new Date(c.time);
-      csvText += d.toISOString()+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
+      var d3 = new Date(c.time);
+      csvText += d3.toISOString()+","+c.open+","+c.high+","+c.low+","+c.close+","+c.volume+"\n";
     }
-    return {candles:candles, csvText:csvText, meta:result.meta||{}};
+    return {candles:candles, csvText:csvText, meta:meta};
   }
 
   return { fetchCandles:fetchCandles, SYMBOLS:SYMBOLS, INTERVALS:INTERVALS, RANGES:RANGES, RANGE_LABELS:RANGE_LABELS, rangesFor:rangesFor };
