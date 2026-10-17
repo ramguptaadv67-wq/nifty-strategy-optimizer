@@ -1,8 +1,9 @@
 name: Checkpoint
 
-# Runs on every push to main. Two jobs:
+# Runs on every push to main. Three jobs:
 # 1. FEATURE GUARD - fails loudly if any existing feature was deleted or a file was truncated/replaced with junk.
-# 2. CHECKPOINT TAG - if (and only if) the guard passes, creates a restore-point tag for that exact version.
+# 2. SYNTAX CHECK - fails if any JavaScript is broken (a bad paste once made the app dead on arrival).
+# 3. CHECKPOINT TAG - if (and only if) everything passes, creates a restore-point tag for that exact version.
 
 on:
   push:
@@ -86,10 +87,10 @@ jobs:
           chk index.html 'Smart Evolution' "Smart Evolution optimization method"
           chk index.html 'verifyBtn' "Verify Top Result button"
           chk index.html 'launchOptimize' "shared optimizer launcher"
-          chk js/worker.js 'useGa' "genetic algorithm in worker"
-          chk js/worker.js 'gaTournament' "GA tournament selection"
 
           echo "== Optimizer worker (js/worker.js) =="
+          chk js/worker.js 'useGa' "genetic algorithm in worker"
+          chk js/worker.js 'gaTournament' "GA tournament selection"
           chk js/worker.js 'mulberry32' "seeded PRNG (reproducible results)"
           chk js/worker.js 'SAMPLE_LIMIT' "sampling cap for huge sweeps"
           chk js/worker.js 'parseCSV' "CSV parser inlined in worker"
@@ -102,6 +103,10 @@ jobs:
           chk src/index.js "'/api/nsefut'" "NSE futures endpoint"
           chk src/index.js 'BhavCopy_NSE_FO' "NSE bhavcopy download"
           chk src/index.js 'extractFrontMonthCsv' "front-month futures extraction"
+
+          echo "== Deployment config =="
+          chk wrangler.toml 'name = "nifty-strategy-optimizer0"' "wrangler.toml worker name matches the deployed worker"
+          chk wrangler.toml 'binding = "ASSETS"' "assets binding present"
 
           echo "== File sizes (detect truncation / junk commits) =="
           sizechk index.html 20000
@@ -124,6 +129,9 @@ jobs:
           fi
           echo ""
           echo "All features present. Nothing was deleted."
+
+      - name: JavaScript syntax check
+        run: python3 tools/check_syntax.py
 
       - name: Create checkpoint tag (restore point)
         run: |
