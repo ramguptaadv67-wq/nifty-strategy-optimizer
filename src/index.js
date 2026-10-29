@@ -74,34 +74,55 @@ function safeEqual(a, b) {
   return r === 0;
 }
 
-// Verify a 6-digit code against the current time step (+/- TOTP_WINDOW).
-async function verifyTotp(secretB32, code, nowMs) {
+// Which time step does this code belong to? 0 = current step, negative = past.
+// Used to explain a rejection (clock skew) - it never widens what is accepted.
+const MAX_SKEW_STEPS = 10;
+
+async function totpMatchOffset(secretB32, code, nowMs) {
   const keyBytes = base32Decode(secretB32);
-  if (keyBytes.length === 0) return false;
+  if (keyBytes.length === 0) return null;
   const clean = String(code || '').replace(/\D/g, '');
-  if (clean.length !== TOTP_DIGITS) return false;
+  if (clean.length !== TOTP_DIGITS) return null;
   const counter = Math.floor((nowMs === undefined ? Date.now() : nowMs) / 1000 / TOTP_PERIOD);
-  for (let d = -TOTP_WINDOW; d <= TOTP_WINDOW; d++) {
+  for (let d = -MAX_SKEW_STEPS; d <= MAX_SKEW_STEPS; d++) {
     const expected = await hotp(keyBytes, counter + d);
-    if (safeEqual(expected, clean)) return true;
+    if (safeEqual(expected, clean)) return d;
   }
-  return false;
+  return null;
 }
 
-// Signed session token: "<expiryEpochSeconds>.<hmacB64url>"
-async function signSession(expiry, sessionSecret) {
-  const payload = String(expiry);
+// Verify a 6-digit code against the current time step (+/- TOTP_WINDOW).
+async function verifyTotp(secretB32, code, nowMs) {
+  const offset = await totpMatchOffset(secretB32, code, nowMs);
+  return offset !== null && Math.abs(offset) <= TOTP_WINDOW;
+}
+
+function randomNonce() {
+  const bytes = new Uint8Array(16);
+  crypto.getRandomValues(bytes);
+  return toB64url(bytes);
+}
+
+// Signed session token: "<expiryEpochSeconds>.<nonce>.<hmacB64url>"
+// The nonce is fresh on every login, so each login gets its own session token
+// (two logins in the same second no longer produce identical cookies).
+async function signSession(expiry, sessionSecret, nonce) {
+  const payload = String(expiry) + '.' + (nonce || randomNonce());
   const sig = await hmacBytes('SHA-256', enc.encode(sessionSecret), enc.encode('v1|' + payload));
   return payload + '.' + toB64url(sig);
 }
 
 async function verifySession(token, sessionSecret) {
   if (!token || typeof token !== 'string') return false;
-  const idx = token.lastIndexOf('.');
-  if (idx <= 0) return false;
-  const payload = token.slice(0, idx);
-  const sigPart = token.slice(idx + 1);
-  const expiry = parseInt(payload, 10);
+  const sigIdx = token.lastIndexOf('.');
+  if (sigIdx <= 0) return false;
+  const payload = token.slice(0, sigIdx);
+  const sigPart = token.slice(sigIdx + 1);
+  const dotIdx = payload.indexOf('.');
+  if (dotIdx <= 0) return false;
+  const expiry = parseInt(payload.slice(0, dotIdx), 10);
+  const nonce = payload.slice(dotIdx + 1);
+  if (!nonce || nonce.length < 16) return false;
   if (!isFinite(expiry) || expiry * 1000 < Date.now()) return false;
   const expected = await hmacBytes('SHA-256', enc.encode(sessionSecret), enc.encode('v1|' + payload));
   return safeEqual(toB64url(expected), sigPart);
@@ -193,7 +214,7 @@ button:hover{transform:translateY(-1px)}
 ${err}
 <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autofocus required>
 <button type="submit">Unlock</button>
-<div class="foot">Session lasts 12 hours</div>
+<div class="foot">Session lasts 12 hours &middot; server time ${new Date().toISOString().slice(11, 19)} UTC</div>
 </form>
 </body>
 </html>`;
@@ -334,10 +355,20 @@ export default {
         }
       } catch (e) { code = ''; }
 
-      const ok = await verifyTotp(totpSecret, code);
+      const offset = await totpMatchOffset(totpSecret, code);
+      const ok = offset !== null && Math.abs(offset) <= TOTP_WINDOW;
       if (!ok) {
         await recordFailure(request);
-        return loginPage('Incorrect or expired code. Try the current code from your authenticator.', 401);
+        let msg = 'Incorrect code. Make sure you are reading the newest 6 digits from the authenticator entry for this site.';
+        if (offset !== null) {
+          const secs = Math.abs(offset) * TOTP_PERIOD;
+          msg = offset < 0
+            ? 'That code was valid about ' + secs + ' seconds ago - this device clock looks slow. Turn on automatic date and time, then enter the current code.'
+            : 'That code is not valid yet - it starts working in about ' + secs + ' seconds. This device clock looks fast; turn on automatic date and time.';
+        } else {
+          msg += ' If the correct code keeps failing, the TOTP_SECRET stored in Cloudflare does not match the QR you scanned.';
+        }
+        return loginPage(msg, 401);
       }
 
       await clearFailures(request);
