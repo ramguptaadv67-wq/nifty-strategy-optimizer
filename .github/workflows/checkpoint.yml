@@ -114,7 +114,7 @@ jobs:
           notchk src/index.js 'LMZDGA77' "no TOTP secret hardcoded in source"
 
           echo "== Deployment config =="
-          chk wrangler.toml 'name = "nifty-strategy-optimizer0"' "wrangler.toml worker name matches the deployed worker"
+          chk wrangler.toml 'name = "horseoptimizer"' "wrangler.toml worker name matches the live worker"
           chk wrangler.toml 'binding = "ASSETS"' "assets binding present"
 
           echo "== File sizes (detect truncation / junk commits) =="
