@@ -2,6 +2,11 @@ name = "nifty-strategy-optimizer0"
 compatibility_date = "2024-01-01"
 main = "src/index.js"
 
+# Secrets are NOT stored here. Set them once with:
+#   npx wrangler secret put TOTP_SECRET
+#   npx wrangler secret put SESSION_SECRET
+# Generate a new pair (and a QR code) with: python3 tools/gen_totp.py
+
 [assets]
 directory = "."
 binding = "ASSETS"
