@@ -103,6 +103,19 @@ function randomNonce() {
   return toB64url(bytes);
 }
 
+// Short, non-reversible ID for the configured TOTP key. Two different secrets
+// never share one, so it shows at a glance whether the stored TOTP_SECRET is
+// the one whose QR was scanned. It reveals nothing usable about the secret.
+async function totpKeyInfo(secretB32) {
+  const keyBytes = base32Decode(secretB32);
+  if (!keyBytes.length) return { id: 'none', warning: 'TOTP_SECRET is empty or unreadable' };
+  const digest = new Uint8Array(await crypto.subtle.digest('SHA-256', keyBytes));
+  const id = toB64url(digest).slice(0, 8).toUpperCase();
+  const warning = keyBytes.length === 20 ? '' :
+    'TOTP_SECRET decodes to ' + keyBytes.length + ' bytes but a Google Authenticator key is 20 - it probably has extra characters (a prefix, quotes or spaces).';
+  return { id: id, warning: warning };
+}
+
 // Signed session token: "<expiryEpochSeconds>.<nonce>.<hmacB64url>"
 // The nonce is fresh on every login, so each login gets its own session token
 // (two logins in the same second no longer produce identical cookies).
@@ -178,7 +191,7 @@ async function clearFailures(request) {
 // ---------------------------------------------------------------------------
 // Login screen
 // ---------------------------------------------------------------------------
-function loginPage(errorMessage, status) {
+function loginPage(errorMessage, status, keyInfo) {
   const err = errorMessage
     ? '<div class="err">' + errorMessage + '</div>'
     : '<div class="hint">Open Google Authenticator and enter the current 6-digit code.</div>';
@@ -204,6 +217,7 @@ button:hover{transform:translateY(-1px)}
 .err{background:rgba(248,81,73,.12);color:var(--red);border:1px solid rgba(248,81,73,.35);border-radius:6px;padding:.6rem;font-size:.8rem;margin-bottom:1rem}
 .hint{color:var(--dim);font-size:.78rem;margin-bottom:1rem}
 .foot{margin-top:1.5rem;font-size:.7rem;color:var(--dim)}
+.warn{margin-top:.9rem;background:rgba(210,153,34,.12);border:1px solid rgba(210,153,34,.4);color:#d29922;border-radius:6px;padding:.5rem .6rem;font-size:.72rem;text-align:left;line-height:1.4}
 </style>
 </head>
 <body>
@@ -214,8 +228,9 @@ button:hover{transform:translateY(-1px)}
 ${err}
 <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" pattern="[0-9]{6}" maxlength="6" placeholder="000000" autofocus required>
 <button type="submit">Unlock</button>
-<div class="foot">Session lasts 12 hours &middot; server time ${new Date().toISOString().slice(11, 19)} UTC</div>
+<div class="foot">Session lasts 12 hours &middot; server time ${new Date().toISOString().slice(11, 19)} UTC &middot; key ID ${keyInfo && keyInfo.id ? keyInfo.id : '-'}</div>
 </form>
+${keyInfo && keyInfo.warning ? '<div class="warn">' + keyInfo.warning + '</div>' : ''}
 </body>
 </html>`;
   return new Response(html, {
@@ -338,11 +353,12 @@ export default {
       const missing = [!totpSecret ? 'TOTP_SECRET' : null, !sessionSecret ? 'SESSION_SECRET' : null].filter(Boolean).join(' + ');
       return configErrorPage(missing);
     }
+    const keyInfo = await totpKeyInfo(totpSecret);
 
     // ---- Login submission ---------------------------------------------
     if (url.pathname === '/auth' && request.method === 'POST') {
       if (await isThrottled(request)) {
-        return loginPage('Too many incorrect codes. Wait 10 minutes and try again.', 429);
+        return loginPage('Too many incorrect codes. Wait 10 minutes and try again.', 429, keyInfo);
       }
       let code = '';
       try {
@@ -350,8 +366,9 @@ export default {
         if (ct.includes('application/json')) {
           code = (await request.json()).code || '';
         } else {
-          const form = await request.formData();
-          code = form.get('code') || '';
+          const raw = await request.text();
+          const m = raw.match(/(?:^|&)code=([^&]*)/);
+          code = m ? decodeURIComponent(m[1].replace(/\+/g, ' ')) : '';
         }
       } catch (e) { code = ''; }
 
@@ -359,16 +376,19 @@ export default {
       const ok = offset !== null && Math.abs(offset) <= TOTP_WINDOW;
       if (!ok) {
         await recordFailure(request);
-        let msg = 'Incorrect code. Make sure you are reading the newest 6 digits from the authenticator entry for this site.';
-        if (offset !== null) {
+        const digits = String(code || '').replace(/\D/g, '');
+        let msg;
+        if (digits.length !== TOTP_DIGITS) {
+          msg = 'That was not a 6-digit code. Enter all six digits from the authenticator, with no spaces.';
+        } else if (offset !== null) {
           const secs = Math.abs(offset) * TOTP_PERIOD;
           msg = offset < 0
             ? 'That code was valid about ' + secs + ' seconds ago - this device clock looks slow. Turn on automatic date and time, then enter the current code.'
             : 'That code is not valid yet - it starts working in about ' + secs + ' seconds. This device clock looks fast; turn on automatic date and time.';
         } else {
-          msg += ' If the correct code keeps failing, the TOTP_SECRET stored in Cloudflare does not match the QR you scanned.';
+          msg = 'Incorrect code. If the current code from the authenticator keeps failing, the TOTP_SECRET stored in Cloudflare does not match the QR you scanned - compare the key ID at the bottom of this screen with the QR you enrolled.';
         }
-        return loginPage(msg, 401);
+        return loginPage(msg, 401, keyInfo);
       }
 
       await clearFailures(request);
@@ -399,7 +419,7 @@ export default {
     // ---- Everything below requires a valid session ---------------------
     const sessionOk = await verifySession(getCookie(request, SESSION_COOKIE), sessionSecret);
     if (!sessionOk) {
-      if (request.method === 'GET' || request.method === 'HEAD') return loginPage(null, 401);
+      if (request.method === 'GET' || request.method === 'HEAD') return loginPage(null, 401, keyInfo);
       return new Response(JSON.stringify({ error: 'unauthorized' }), {
         status: 401,
         headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }
