@@ -104,6 +104,15 @@ jobs:
           chk src/index.js 'BhavCopy_NSE_FO' "NSE bhavcopy download"
           chk src/index.js 'extractFrontMonthCsv' "front-month futures extraction"
 
+          echo "== Authentication (Google Authenticator) =="
+          chk src/index.js 'TOTP_SECRET' "TOTP secret read from Worker secrets"
+          chk src/index.js 'SESSION_SECRET' "session secret read from Worker secrets"
+          chk src/index.js 'HttpOnly' "HttpOnly session cookie"
+          chk src/index.js 'verifyTotp' "TOTP code verification"
+          chk src/index.js 'SESSION_TTL_SECONDS' "12-hour session lifetime"
+          chk src/index.js 'crypto.subtle' "Web Crypto HMAC"
+          notchk src/index.js 'LMZDGA77' "no TOTP secret hardcoded in source"
+
           echo "== Deployment config =="
           chk wrangler.toml 'name = "nifty-strategy-optimizer0"' "wrangler.toml worker name matches the deployed worker"
           chk wrangler.toml 'binding = "ASSETS"' "assets binding present"

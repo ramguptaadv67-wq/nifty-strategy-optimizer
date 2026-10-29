@@ -40,6 +40,36 @@ npx wrangler deploy
 
 Then hard-refresh the site (Ctrl+Shift+R) and check the **Build** date in the header matches today - if it does not, the deploy did not go through.
 
+## Access control (Google Authenticator)
+
+The Worker requires a 6-digit authenticator code before it serves the app.
+
+- Every path returns a lock screen (HTTP 401) unless the request carries a valid session cookie. Only `/auth` (login POST) and `/logout` are reachable without one.
+- `/auth` verifies the submitted code with TOTP - RFC 6238, HMAC-SHA1, 30-second step, 6 digits, +/-1 step of clock-drift tolerance. That is exactly what Google Authenticator generates; the implementation is checked against all six RFC 6238 test vectors in the repo's test run.
+- On success the Worker sets `sid`: an `HttpOnly; Secure; SameSite=Lax` cookie signed with HMAC-SHA256, valid for **12 hours**. `/logout` clears it.
+- Five wrong codes from one IP blocks further attempts for 10 minutes (best-effort - the Cache API is per-datacenter).
+
+### Secrets (never in the source)
+
+Both secrets live in Cloudflare Worker secrets:
+
+```bash
+npx wrangler secret put TOTP_SECRET      # Base32 secret shared with Google Authenticator
+npx wrangler secret put SESSION_SECRET   # random key that signs the session cookie
+```
+
+If either is missing, the Worker serves a setup page (HTTP 500) naming the missing secret instead of the app.
+
+### Generating a secret and QR code
+
+```bash
+python3 tools/gen_totp.py        # writes totp-qr.png, prints both secrets
+```
+
+Scan the QR with Google Authenticator (or type the Base32 secret in manually), then store the printed values with `wrangler secret put`. To rotate: run the script again, re-add the account in your authenticator, update both secrets and redeploy - existing sessions stop working because the signing key changed.
+
+Note: the cookie is marked `Secure`, so sign in over HTTPS (the workers.dev URL). A plain `http://` localhost preview will not keep the cookie.
+
 ## Parameter sweep
 
 Each of the 6 numeric parameters is configured with a **min** and **max** (step is fixed at 1 - every value in the range is tested):
@@ -93,4 +123,5 @@ Or on GitHub.com: open the last green commit -> "Revert changes" button.
 
 - `index.html` - the whole app (UI + Yahoo/NSE fetching + optimization client)
 - `js/worker.js` - self-contained Web Worker (engine + optimizer + CSV parser inlined, no imports)
-- `src/index.js` - Cloudflare Worker: `/api/yahoo` proxy + `/api/nsefut` NSE futures endpoint
+- `src/index.js` - Cloudflare Worker: `/api/yahoo` proxy + `/api/nsefut` NSE futures endpoint + Google Authenticator login
+- `tools/gen_totp.py` - generates a TOTP secret, session secret and QR code
